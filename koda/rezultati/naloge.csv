@@ -1,0 +1,9 @@
+n,oblika,konfiguracija,primitiv,naloga,datoteka,kubiti,ponovitev,cas_qpu,kalibracija,backend,racun,cas_oddaje,lastnosti
+4,drevo,i,sampler,dbucikeps3fc73bij2vg,drevo_4_i_sampler_dbucikeps3fc73bij2vg.json,120;121;122;123,1024,2.0,kalibracija_drevo_4_20261117_223824.json,ibm_fez,grega,2026-11-17T22:38:25.153875+01:00,lastnosti_drevo_4_20261117_223824.json
+4,drevo,i,estimator,dbucikdarooc73fjlnm0,drevo_4_i_estimator_dbucikdarooc73fjlnm0.json,120;121;122;123,512,4.0,,ibm_fez,grega,2026-11-17T22:38:26.150122+01:00,lastnosti_drevo_4_20261117_223824.json
+4,drevo,ii,sampler,dbuciknf8rhs73bm08ug,drevo_4_ii_sampler_dbuciknf8rhs73bm08ug.json,120;121;122;123,1024,2.0,kalibracija_drevo_4_20261117_223824.json,ibm_fez,grega,2026-11-17T22:38:26.855706+01:00,lastnosti_drevo_4_20261117_223824.json
+4,drevo,ii,estimator,dbuciktarooc73fjlnn0,drevo_4_ii_estimator_dbuciktarooc73fjlnn0.json,120;121;122;123,512,4.0,,ibm_fez,grega,2026-11-17T22:38:27.819267+01:00,lastnosti_drevo_4_20261117_223824.json
+4,drevo,iii,sampler,dbucil7f8rhs73bm08vg,drevo_4_iii_sampler_dbucil7f8rhs73bm08vg.json,120;121;122;123,1024,2.0,kalibracija_drevo_4_20261117_223824.json,ibm_fez,grega,2026-11-17T22:38:28.532925+01:00,lastnosti_drevo_4_20261117_223824.json
+4,drevo,iii,estimator,dbucileps3fc73bij32g,drevo_4_iii_estimator_dbucileps3fc73bij32g.json,120;121;122;123,512,4.0,,ibm_fez,grega,2026-11-17T22:38:29.442388+01:00,lastnosti_drevo_4_20261117_223824.json
+4,drevo,iv,estimator,dbucilnf8rhs73bm0900,drevo_4_iv_estimator_dbucilnf8rhs73bm0900.json,120;121;122;123,512,7.0,,ibm_fez,grega,2026-11-17T22:38:30.740167+01:00,lastnosti_drevo_4_20261117_223824.json
+4,drevo,,kalibracija,dbucilvf8rhs73bm091g,kalibracija_drevo_4_20261117_223824.json,120;121;122;123,1024,3.0,kalibracija_drevo_4_20261117_223824.json,ibm_fez,grega,2026-11-17T22:38:31.662468+01:00,lastnosti_drevo_4_20261117_223824.json

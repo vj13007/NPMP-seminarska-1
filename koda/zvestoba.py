@@ -80,10 +80,20 @@ def pripravi_vezja(n: int, oblika: str, naprava, stopnja: int = 1) -> Vezja:
 # shranjevanje in branje rezultatov
 ########################################################################
 
+class Koder(RuntimeEncoder):
+    """RuntimeEncoder, ki objekte brez zapisa (npr. Metadata primitivov Executor) zapise kot slovar."""
+
+    def default(self, obj):
+        try:
+            return super().default(obj)
+        except TypeError:
+            return vars(obj) if hasattr(obj, "__dict__") else str(obj)
+
+
 def shrani(rezultat, pot: str) -> None:
     """Rezultat primitiva (Sampler ali Estimator) zapise v JSON, da ga analiza bere brez omrezja."""
     with open(pot, "w") as f:
-        json.dump(rezultat, f, cls=RuntimeEncoder)
+        json.dump(rezultat, f, cls=Koder)
 
 
 def nalozi(pot: str):

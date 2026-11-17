@@ -7,25 +7,32 @@ from pathlib import Path
 
 import pandas as pd
 from qiskit_ibm_runtime import Batch, EstimatorV2, QiskitRuntimeService, SamplerV2
+from qiskit_ibm_runtime.executor_estimator.prepare import prepare as pripravi_estimator
+from qiskit_ibm_runtime.executor_sampler.prepare import prepare as pripravi_sampler
 from qiskit_ibm_runtime.fake_provider import FakeFez
-from qiskit_ibm_runtime.options import EstimatorOptions, SamplerOptions
+from qiskit_ibm_runtime.options_models import EstimatorOptions, SamplerOptions
 
 from procesor import NALOGE, dodaj_nalogo, kalibriraj, kubiti_iz_niza, zabelezi
-from zvestoba import (FAKTORJI, PONOVITEV, Vezja, faze, paritete_iz_estimatorja, pripravi_vezja,
-                      shrani, stevci_iz_samplerja)
+from zvestoba import FAKTORJI, PONOVITEV, Vezja, faze, pripravi_vezja, shrani
 
 #Tukaj dajta pot do svojega qiskit-ibm.json. Ask claude how to set it up.
 RACUNI = Path(__file__).resolve().parents[2] / "qiskit-ibm.json"
 KONFIGURACIJE = ("i", "ii", "iii", "iv")
 ODDANE = "oddane.csv"
+PONOVITEV_SAMPLER = 4096
 PONOVITEV_ESTIMATOR = 512
 REZERVA = 1.3
+# iz testne naloge n = 4 (17. 11. 2026): 1,9 s na nalogo in 0,33 ms na strel, zaokrozeno navzgor
+SEKUND_NA_NALOGO = 2.0
+SEKUND_NA_STREL = 0.35e-3
+PRIMITIVI = {"sampler": (SamplerV2, SamplerOptions, pripravi_sampler),
+             "estimator": (EstimatorV2, EstimatorOptions, pripravi_estimator)}
 
 
 def moznosti(konfiguracija: str, primitiv: str) -> dict:
     """Moznosti Runtime za konfiguracijo (i)-(iv); vse, kar ni vklopljeno, je izrecno izklopljeno."""
     stopnja = KONFIGURACIJE.index(konfiguracija)
-    m = {"default_shots": PONOVITEV if primitiv == "sampler" else PONOVITEV_ESTIMATOR,
+    m = {"default_shots": PONOVITEV_SAMPLER if primitiv == "sampler" else PONOVITEV_ESTIMATOR,
          "dynamical_decoupling": {"enable": stopnja >= 1, "sequence_type": "XY4"},
          # sukanje meritev je del TREX pri Estimatorju; pri Samplerju bi pokvarilo popravek mthree
          "twirling": {"enable_gates": stopnja >= 2, "enable_measure": primitiv == "estimator"}}
@@ -43,7 +50,7 @@ def povzetek(v: Vezja, n: int, oblika: str, konfiguracije: list[str]) -> None:
     """Izpis vezij, vklopljenih tehnik in stevila ponovitev; ob tem preveri veljavnost moznosti."""
     print(f"{oblika} n={n}: kubiti {v.kubiti}")
     print(f"  CZ {v.estimatorsko.count_ops().get('cz', 0)}, globina {v.estimatorsko.depth()}, "
-          f"faz {2 * n + 2}, ponovitev na vezje: Sampler {PONOVITEV}, Estimator {PONOVITEV_ESTIMATOR}")
+          f"faz {2 * n + 2}, ponovitev na vezje: Sampler {PONOVITEV_SAMPLER}, Estimator {PONOVITEV_ESTIMATOR}")
     for k in konfiguracije:
         s = SamplerOptions(**moznosti(k, "sampler"))
         e = EstimatorOptions(**moznosti(k, "estimator"))
@@ -52,32 +59,27 @@ def povzetek(v: Vezja, n: int, oblika: str, konfiguracije: list[str]) -> None:
               f"TREX={e.resilience.measure_mitigation} ZNE={e.resilience.zne_mitigation}")
 
 
-def poslji(v: Vezja, n: int, konfiguracije: list[str], mode, dry_run: bool = False):
-    """Sproti oddaja Sampler (i)-(iii) in Estimator (i)-(iv) za en n; vraca (konfiguracija, primitiv, naloga)."""
+def naloge(v: Vezja, n: int, konfiguracije: list[str]) -> list[tuple[str, str, list]]:
+    """(konfiguracija, primitiv, PUB-i) za en n: Sampler (i)-(iii) za populaciji, Estimator (i)-(iv) za C."""
     phi = faze(n)
+    seznam = []
     for konf in konfiguracije:
         if konf != "iv":
-            sampler = SamplerV2(mode=mode, options=moznosti(konf, "sampler"))
-            yield konf, "sampler", sampler.run([v.populacijsko], dry_run=dry_run)
-        estimator = EstimatorV2(mode=mode, options=moznosti(konf, "estimator"))
-        yield konf, "estimator", estimator.run([(v.estimatorsko, v.opazljivka, phi[:, None])],
-                                               dry_run=dry_run)
+            seznam.append((konf, "sampler", [v.populacijsko]))
+        seznam.append((konf, "estimator", [(v.estimatorsko, v.opazljivka, phi[:, None])]))
+    return seznam
 
 
-def preizkusi(vezja: dict[int, Vezja], konfiguracije: list[str], backend) -> float | None:
-    """Suha oddaja na strezniku brez procesorja: preveri vse naloge in rezultate; vrne oceno casa QPU."""
-    skupaj: float | None = 0.0
+def preizkusi(vezja: dict[int, Vezja], konfiguracije: list[str], backend) -> tuple[int, int]:
+    """Lokalna priprava vseh nalog, enaka tisti pred oddajo; vrne stevilo nalog in strelov s kalibracijami."""
+    nalog, strelov = len(vezja), 2 * PONOVITEV * len(vezja)
     for n, v in vezja.items():
-        for konf, primitiv, naloga in poslji(v, n, konfiguracije, backend, dry_run=True):
-            rezultat = naloga.result()
-            if primitiv == "sampler":
-                stevci_iz_samplerja(rezultat, 0)
-            elif len(paritete_iz_estimatorja(rezultat, 0)[0]) != 2 * n + 2:
-                raise ValueError(f"Estimator n={n} ({konf}) ne vrne {2 * n + 2} paritet")
-            ocena = naloga.usage_estimation.get("quantum_seconds")
-            print(f"  n={n} ({konf}) {primitiv}: ocena {ocena} s")
-            skupaj = None if ocena is None or skupaj is None else skupaj + ocena
-    return skupaj
+        for konf, primitiv, pubi in naloge(v, n, konfiguracije):
+            _, Moznosti, pripravi = PRIMITIVI[primitiv]
+            program, _ = pripravi(pubi, Moznosti(**moznosti(konf, primitiv)), None, backend=backend)
+            nalog += 1
+            strelov += program.shots * sum(postavka.size() for postavka in program.items)
+    return nalog, strelov
 
 
 def oddaj(v: Vezja, n: int, oblika: str, konfiguracije: list[str], backend, racun: str,
@@ -89,7 +91,8 @@ def oddaj(v: Vezja, n: int, oblika: str, konfiguracije: list[str], backend, racu
     skupno = dict(n=n, oblika=oblika, kubiti=";".join(map(str, v.kubiti)), racun=racun, lastnosti=lastnosti)
 
     with Batch(backend=backend) as paket:
-        for konf, primitiv, naloga in poslji(v, n, konfiguracije, paket):
+        for konf, primitiv, pubi in naloge(v, n, konfiguracije):
+            naloga = PRIMITIVI[primitiv][0](mode=paket, options=moznosti(konf, primitiv)).run(pubi)
             dodaj_nalogo(mapa / ODDANE, konfiguracija=konf, primitiv=primitiv, naloga=naloga.job_id(),
                          ponovitev=moznosti(konf, primitiv)["default_shots"],
                          kalibracija=kalibracija if primitiv == "sampler" else "", **skupno)
@@ -158,12 +161,12 @@ if __name__ == "__main__":
     vezja = {n: pripravi_vezja(n, a.oblika, backend) for n in a.n}
     for n, v in vezja.items():
         povzetek(v, n, a.oblika, a.konf)
-    print("suha oddaja na strezniku (brez procesorja) ...")
-    ocena = preizkusi(vezja, a.konf, backend)
+    nalog, strelov = preizkusi(vezja, a.konf, backend)
+    ocena = nalog * SEKUND_NA_NALOGO + strelov * SEKUND_NA_STREL
     ostane = storitev.usage().get("usage_remaining_seconds")
-    print(f"ocena skupaj: {ocena} s brez kalibracij mthree, na racunu ostane: {ostane} s")
-    if ocena is None or ostane is None or REZERVA * ocena > ostane:
-        sys.exit(f"ne oddam: ocena x {REZERVA} presega preostanek ali ni znana")
+    print(f"{nalog} nalog, {strelov} strelov, ocena {ocena:.0f} s; na racunu ostane {ostane} s")
+    if ostane is None or REZERVA * ocena > ostane:
+        sys.exit(f"ne oddam: ocena x {REZERVA} presega preostanek ali ta ni znan")
 
     if input(f"Oddam na {backend.name} z racunom {a.racun}? [da/ne] ") == "da":
         for n, v in vezja.items():

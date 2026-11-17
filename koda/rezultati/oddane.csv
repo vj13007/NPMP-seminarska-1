@@ -1,0 +1,9 @@
+n,oblika,konfiguracija,primitiv,naloga,datoteka,kubiti,ponovitev,cas_qpu,kalibracija,backend,racun,cas_oddaje,lastnosti
+4,drevo,i,sampler,dbucikeps3fc73bij2vg,,120;121;122;123,1024,,kalibracija_drevo_4_20261117_223824.json,,grega,,lastnosti_drevo_4_20261117_223824.json
+4,drevo,i,estimator,dbucikdarooc73fjlnm0,,120;121;122;123,512,,,,grega,,lastnosti_drevo_4_20261117_223824.json
+4,drevo,ii,sampler,dbuciknf8rhs73bm08ug,,120;121;122;123,1024,,kalibracija_drevo_4_20261117_223824.json,,grega,,lastnosti_drevo_4_20261117_223824.json
+4,drevo,ii,estimator,dbuciktarooc73fjlnn0,,120;121;122;123,512,,,,grega,,lastnosti_drevo_4_20261117_223824.json
+4,drevo,iii,sampler,dbucil7f8rhs73bm08vg,,120;121;122;123,1024,,kalibracija_drevo_4_20261117_223824.json,,grega,,lastnosti_drevo_4_20261117_223824.json
+4,drevo,iii,estimator,dbucileps3fc73bij32g,,120;121;122;123,512,,,,grega,,lastnosti_drevo_4_20261117_223824.json
+4,drevo,iv,estimator,dbucilnf8rhs73bm0900,,120;121;122;123,512,,,,grega,,lastnosti_drevo_4_20261117_223824.json
+4,drevo,,kalibracija,dbucilvf8rhs73bm091g,,120;121;122;123,1024,,kalibracija_drevo_4_20261117_223824.json,,grega,,lastnosti_drevo_4_20261117_223824.json
