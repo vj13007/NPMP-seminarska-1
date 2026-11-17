@@ -1,2 +1,15 @@
 .venv/
 __pycache__/
+
+naloga/*.aux
+naloga/*.bbl
+naloga/*.blg
+naloga/*.fdb_latexmk
+naloga/*.fls
+naloga/*.idx
+naloga/*.ilg
+naloga/*.ind
+naloga/*.log
+naloga/*.out
+naloga/*.synctex.gz
+naloga/*.toc
