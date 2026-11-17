@@ -173,16 +173,27 @@ def ghz_drevo(n: int, target: Target) -> tuple[QuantumCircuit, list[int]]:
 
 
 if __name__ == "__main__":
+    import csv
+
     from qiskit import transpile
     from qiskit_ibm_runtime.fake_provider import FakeFez
 
     naprava = FakeFez()
+    glava = ["n", "oblika", "cx", "globina", "cz_prevedeno", "globina_prevedeno"]
     print(f"{'n':>4} {'oblika':8} {'CX':>4} {'glob.':>6} {'CZ po prev.':>12} {'glob. po prev.':>15}")
-    for n in (5, 10, 20, 50, 100, 120):
-        for ime, (vezje, kubiti) in (
-            ("veriga", ghz_veriga(n, naprava.target)),
-            ("drevo", ghz_drevo(n, naprava.target)),
-        ):
-            prevedeno = transpile(vezje, naprava, initial_layout=kubiti, optimization_level=1)
-            print(f"{n:>4} {ime:8} {vezje.count_ops()['cx']:>4} {vezje.depth():>6} "
-                  f"{prevedeno.count_ops().get('cz', 0):>12} {prevedeno.depth():>15}")
+
+    with open("lastnosti_vezij.csv", "w", newline="") as f:
+        pisec = csv.writer(f)
+        pisec.writerow(glava)
+        for n in (5, 10, 20, 50, 100, 120):
+            for ime, (vezje, kubiti) in (
+                ("veriga", ghz_veriga(n, naprava.target)),
+                ("drevo", ghz_drevo(n, naprava.target)),
+            ):
+                prevedeno = transpile(vezje, naprava, initial_layout=kubiti, optimization_level=1)
+                vrstica = [n, ime, vezje.count_ops()["cx"], vezje.depth(),
+                           prevedeno.count_ops().get("cz", 0), prevedeno.depth()]
+                pisec.writerow(vrstica)
+                f.flush()
+                print(f"{n:>4} {ime:8} {vrstica[2]:>4} {vrstica[3]:>6} "
+                      f"{vrstica[4]:>12} {vrstica[5]:>15}")

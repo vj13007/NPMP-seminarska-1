@@ -84,14 +84,23 @@ def zvestoba(vezje: QuantumCircuit, ponovitev: int = 4096) -> dict[str, float]:
 
 
 if __name__ == "__main__":
+    import csv
+
     from qiskit_ibm_runtime.fake_provider import FakeFez
 
     target = FakeFez().target
+    glava = ["n", "oblika", "min_stabilizator", "P0", "P1", "C", "F"]
     print(f"{'n':>4} {'oblika':8} {'min stab.':>10} {'P0':>7} {'P1':>7} {'C':>7} {'F':>7}")
-    for n in (5, 10, 20, 50, 100):
-        for oblika in ("veriga", "drevo"):
-            vezje = vezje_ghz(n, oblika, target)
-            stab = preveri_stabilizatorje(vezje)
-            r = zvestoba(vezje)
-            print(f"{n:>4} {oblika:8} {stab:10.6f} {r['P0']:7.4f} {r['P1']:7.4f} "
-                  f"{r['C']:7.4f} {r['F']:7.4f}")
+
+    with open("idealno.csv", "w", newline="") as f:
+        pisec = csv.writer(f)
+        pisec.writerow(glava)
+        for n in (5, 10, 20, 50, 100):
+            for oblika in ("veriga", "drevo"):
+                vezje = vezje_ghz(n, oblika, target)
+                stab = preveri_stabilizatorje(vezje)
+                r = zvestoba(vezje)
+                pisec.writerow([n, oblika, stab, r["P0"], r["P1"], r["C"], r["F"]])
+                f.flush()
+                print(f"{n:>4} {oblika:8} {stab:10.6f} {r['P0']:7.4f} {r['P1']:7.4f} "
+                      f"{r['C']:7.4f} {r['F']:7.4f}")
