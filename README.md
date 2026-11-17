@@ -82,22 +82,27 @@ Preizkus teče na Aerjevih primitivih z metodo MPS, ker lokalni način Runtime (
 
 ### `procesor.py` -- zvestoba iz nalog s procesorja
 
-Povezava med oddajo nalog in analizo. Oddajni program po vsaki nalogi pokliče `zabelezi`, ki počaka na rezultat, ga shrani v JSON z dogovorjenim imenom `<oblika>_<n>_<konfiguracija>_<primitiv>.json` in v `naloge.csv` vpiše identifikator naloge, uporabljene kubite, število ponovitev in porabljen procesorski čas. Pred prvo nalogo na danih kubitih pokliče še `kalibriraj`, ki kalibracijo mthree opravi na napravi in jo shrani v JSON, da analiza popravek branja izvede s kalibracijo tistega dne.
+Povezava med oddajo nalog in analizo. Oddajni program (`oddaja.py`) po vsaki nalogi pokliče `zabelezi`, ki počaka na rezultat, ga shrani v JSON z imenom `<oblika>_<n>_<konfiguracija>_<primitiv>_<naloga>.json` (identifikator naloge prepreči prepis ob ponovni oddaji) in v `naloge.csv` vpiše identifikator naloge, napravo, račun, čas oddaje, uporabljene kubite, število ponovitev in porabljen procesorski čas. `kalibriraj` opravi kalibracijo mthree v istem paketu kot meritve in jo shrani v JSON, da analiza popravek branja izvede s kalibracijo tistega dne; tudi kalibracijske naloge so vpisane v `naloge.csv` (primitiv `kalibracija`).
 
-```python
-from procesor import kalibriraj, zabelezi
-v = pripravi_vezja(n, "drevo", naprava)
-kalibriraj(naprava, v.kubiti, "rezultati/kalibracija_drevo_8.json")
-naloga_s = sampler.run([v.populacijsko, (v.paritetno, phi[:, None])], shots=1024)
-naloga_e = estimator.run([(v.estimatorsko, v.opazljivka, phi[:, None])])
-zabelezi(naloga_s, n, "drevo", "i", "sampler", v.kubiti, 1024, "rezultati", "kalibracija_drevo_8.json")
-zabelezi(naloga_e, n, "drevo", "i", "estimator", v.kubiti, 1024, "rezultati")
-```
-
-Analiza nato vsako trojico (n, oblika, konfiguracija) oceni iz shranjenih datotek brez omrežja: populaciji iz prvega PUB-a Samplerja s popravkom mthree, paritete iz Estimatorja (ali iz drugega PUB-a Samplerja, če Estimatorja ni), procesorski čas kot vsoto obeh nalog.
+Analiza nato vsako trojico (n, oblika, konfiguracija) oceni iz shranjenih datotek brez omrežja: populaciji iz prvega PUB-a Samplerja s popravkom mthree, paritete iz Estimatorja (ali iz drugega PUB-a Samplerja, če Estimatorja ni), procesorski čas kot vsoto obeh nalog. Konfiguracija (iv) se od (iii) razlikuje le pri koherenci, zato populaciji vzame iz Samplerja (iii) in GME zanjo ni razglašen.
 
 ```bash
 cd koda && python procesor.py rezultati/naloge.csv    # -> rezultati/rezultati_procesor.csv
+```
+
+### `oddaja.py` -- oddaja nalog na procesor
+
+Za vsak n v enem paketu (`Batch`) odda vse naloge na istih vezjih in kubitih: Sampler za populaciji pri konfiguracijah (i)--(iii), Estimator za koherenco pri (i)--(iv) in kalibracijo mthree. Konfiguracije: (i) le popravek branja (mthree za populaciji, TREX za C), (ii) + DD XY4, (iii) + sukanje vrat, (iv) + ZNE na C (faktorji 1, 3, 5, linearna ekstrapolacija). Vse konfiguracije imajo enako število ponovitev: 1024 pri Samplerju, ker napaka populacij prevladuje v napaki zvestobe, in 512 na fazo pri Estimatorju, ker koherenco ocenimo iz 2n+2 faz hkrati in je zato že pri 512 ponovitvah natančnejša od populacij. Paritet s Samplerjem na procesorju ne merimo, ker bi podvojile porabo za isto količino.
+
+Pred oddajo vse naloge najprej suho odda na strežnik (`dry_run`): strežnik jih preveri in oceni porabo, ne da bi tekle na procesorju, program pa preveri, da so vrnjeni rezultati berljivi. Če ocena, povečana za 30 %, presega preostanek časa na računu, ne odda ničesar; sicer izpiše oceno in zahteva potrditev. Vsako oddano nalogo takoj vpiše v `oddane.csv`, zato se ob prekinitvi nič ne izgubi: `--dokoncaj` shrani in zabeleži vse oddane naloge, ki še niso v `naloge.csv`.
+
+Podatki za račun IBM so v `../../qiskit-ibm.json` (zunaj repozitorija), vsak član pod svojim imenom.
+
+```bash
+cd koda && python oddaja.py 4 8 --suho                         # izpis na FakeFez, brez oddaje
+cd koda && python oddaja.py 4 --racun grega                    # suha oddaja, ocena, potrditev, oddaja
+cd koda && python oddaja.py --dokoncaj --racun grega           # dokonca belezenje po prekinitvi
+# -> rezultati/
 ```
 
 ### `analiza.py` -- prileganje krivulje in meja n_max
