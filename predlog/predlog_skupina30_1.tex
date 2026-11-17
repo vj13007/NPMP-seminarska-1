@@ -1,0 +1,91 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+\usepackage{amsmath}
+\usepackage[a4paper,top=1.4cm,bottom=1.4cm,left=1.8cm,right=1.8cm]{geometry}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xurl}
+\usepackage{microtype}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\setlist{nosep,leftmargin=*}
+
+\newcommand{\sect}[1]{\par\vspace{4pt}{\normalsize\bfseries #1}\par\vspace{1pt}}
+\newcommand{\nmax}{n_{\mathrm{max}}}
+
+\begin{document}
+
+\begin{center}
+{\large\bfseries Koliko kubitov lahko prepletemo? Vpliv tehnik za blaženje napak\\
+na zvestobo stanj GHZ na kvantnem procesorju IBM}\par\vspace{3pt}
+{\itshape Predlog teme seminarske naloge -- Skupina 30}\par
+Veno Jakomin, Jure Pahor in Grega Potočnik
+\end{center}
+
+\sect{Ozadje}
+Stanje GHZ $\frac{1}{\sqrt{2}}(|0\rangle^{\otimes n}+|1\rangle^{\otimes n})$ preplete vseh $n$ kubitov in je z večanjem $n$ vse bolj občutljivo na šum, zato je uveljavljen preizkus zmogljivosti kvantnih procesorjev~[1].
+Zvestoba $F>0{,}5$ dokazuje pristno večdelno prepletenost (GME)~[2].
+Na procesorjih IBM so GME brez detekcije napak potrdili pri 32 kubitih~[3], z detekcijo napak in post-selekcijo pa pri 120~[4].
+
+\sect{Raziskovalno vprašanje}
+Pri kolikšnem največjem številu kubitov $\nmax$ procesor IBM pripravi stanje GHZ z zvestobo $F>0{,}5$ in za koliko ter za kakšno ceno v procesorskem času to mejo premaknejo dinamično razklapljanje (DD), Paulijevo sukanje (angl.\ \emph{twirling}) in ekstrapolacija na ničelni šum (ZNE)~[5]?
+
+\sect{Pričakovani rezultat (hipoteza)}
+S samim popravkom napak branja bo GME izgubljena pri približno 15--25 kubitih.
+DD in sukanje bosta $\nmax$ povečala za vsaj 30\,\%, vendar za ceno večkratnega procesorskega časa.
+ZNE bo ocenjeno zvestobo še povečal, a lahko zaradi večje negotovosti po pravilu $F-2\sigma>0{,}5$ mejo $\nmax$ celo zmanjša.
+Plitvejše drevo BFS bo doseglo večji $\nmax$ kot linearna veriga vrat CNOT.
+
+\sect{Načrt poskusov}
+\begin{enumerate}
+\item \textbf{Vezja:} linearna veriga CNOT (globina $\sim n$) in drevo BFS na grafu povezav procesorja, ki se začne v kubitu z najmanjšo ekscentričnostjo~[4] (globina $\sim$ polmer podgrafa).
+\item \textbf{Merjenje zvestobe:} $F=\frac{1}{2}(P_{0\ldots0}+P_{1\ldots1})+\frac{1}{2}C$.
+Populaciji merimo s Samplerjem v bazi $Z$.
+Koherenco $C$ dobimo z Estimatorjem kot amplitudo paritetnih oscilacij $\langle P(\varphi)\rangle\propto\cos(n\varphi)$ (opazljivka $X^{\otimes n}$ po rotaciji $R_z(\varphi)$ na vsakem kubitu) pri $2n+2$ vrednostih faze~$\varphi$~[1].
+\item \textbf{Konfiguracije blaženja} (enaka vezja): (i) samo popravek branja (mthree za populaciji, TREX za $C$, ostale možnosti izrecno izklopljene), (ii) = (i) + DD (XY4), (iii) = (ii) + sukanje, (iv) = (iii) + ZNE na $C$ (faktorji šuma 1, 3, 5; ZNE podpira le Estimator).
+GME potrjujejo le (i)--(iii); (iv) je ocena z blaženjem, saj ZNE lahko $C$ preceni (tudi $C>1$).
+\item \textbf{Okolja:} idealni simulator (preverjanje); šumni simulator Aer (šumni model procesorja, MPS) le za (i) in ročni ZNE, saj markovski šumni model nima koherentnih napak, ki jih odpravljata DD in sukanje; procesor IBM Heron -- vse naloge na istem (npr.\ \texttt{ibm\_fez}), s shranjenimi kalibracijskimi podatki.
+\item \textbf{Procesorski čas:} Open Plan omogoča 10 minut v 28 dneh na račun, uporabimo tri račune. Drevo BFS izvedemo pri 5--6 vrednostih $n$, ki pokrijejo mejo brez blaženja in z njim (oceni ju šumni simulator), verigo pri 1--2 vrednostih $n$ s (i). Konfiguracije za isti $n$ so v istem paketu (\emph{batch}); porabo izmerimo na testni nalogi.
+\item \textbf{Časovnica:} dan 1--2 vezja in izračun zvestobe na idealnem simulatorju; dan 3 šumni simulator in oddaja nalog na procesor (zaradi čakalnih vrst najpozneje); dan 4--5 analiza; dan 6--7 poročilo in prosojnice.
+\end{enumerate}
+
+\sect{Metrike}
+\begin{itemize}
+\item $F(n)$ z intervali zaupanja: bootstrap meritev z mthree znotraj zanke (populaciji), parametrični bootstrap iz $\sigma$ Estimatorja ($C$); pri ZNE $\sigma$ vključuje negotovost ekstrapolacije;
+\item GME pri danem $n$: $F-2\sigma>0{,}5$; $\nmax$: presečišče prilagojene krivulje $F(n)$ (npr.\ eksponentni upad) z $0{,}5$, z negotovostjo;
+\item vezje pred prevajanjem in po njem: število kubitov, globina, število dvokubitnih vrat (CZ);
+\item procesorski čas (iz metapodatkov nalog) in razmerje med pridobitvijo v $\nmax$ ter dodatnim časom;
+\item simulator proti procesorju, veriga proti drevesu na procesorju, primerjava z objavljenimi rezultati~[3,\,4].
+\end{itemize}
+
+\sect{Orodja}
+Python, Qiskit 2.x, Qiskit Runtime (SamplerV2, EstimatorV2), Qiskit Aer, mthree, IBM Quantum Open Plan (procesorji Heron), NumPy, SciPy in Matplotlib, GitHub (repozitorij), Overleaf (poročilo).
+
+\sect{Razdelitev dela}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}l X@{}}
+\toprule
+Veno Jakomin & vezja GHZ (veriga, drevo BFS), izbira kubitov, idealne in šumne simulacije z ročnim ZNE; poglavji Uvod in Metode. \\
+Jure Pahor & cevovod za zvestobo (mthree, paritetne oscilacije, bootstrap) do konca 2.\ dne, ker ga uporabljajo vsi; prileganje $F(n)$, $\nmax$, grafi; poglavje Rezultati. \\
+Grega Potočnik & nastavitve blaženja v Qiskit Runtime, testna naloga in spremljanje porabe, oddaja nalog, beleženje identifikatorjev nalog in kalibracij; podpoglavje Kaj ni delovalo. \\
+Skupaj & vsak izvede svoj nabor $n$ na svojem računu; razprava, zaključek, prosojnice, README. \\
+\bottomrule
+\end{tabularx}
+
+\sect{Literatura}
+{\footnotesize
+\begin{enumerate}[label={[\arabic*]}]
+\item K.\,X. Wei et al., »Verifying multipartite entangled Greenberger-Horne-Zeilinger states via multiple quantum coherences«, \emph{Phys.\ Rev.\ A} 101, 032343, 2020. \url{https://doi.org/10.1103/PhysRevA.101.032343}
+\item O. Gühne, G. Tóth, »Entanglement detection«, \emph{Physics Reports} 474, 1--75, 2009. \url{https://doi.org/10.1016/j.physrep.2009.02.004}
+\item J.\,F. Kam et al., »Characterization of entanglement on superconducting quantum computers of up to 414 qubits«, \emph{Phys.\ Rev.\ Research} 6, 033155, 2024. \url{https://doi.org/10.1103/PhysRevResearch.6.033155}
+\item A. Javadi-Abhari et al., »Big cats: entanglement in 120 qubits and beyond«, 2025. \url{https://arxiv.org/abs/2510.09520}
+\item K. Temme, S. Bravyi, J.\,M. Gambetta, »Error mitigation for short-depth quantum circuits«, \emph{Phys.\ Rev.\ Lett.} 119, 180509, 2017. \url{https://doi.org/10.1103/PhysRevLett.119.180509}
+\end{enumerate}
+}
+
+\end{document}
