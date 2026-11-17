@@ -1,0 +1,211 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Skupina30/main.tex
+%
+% Pravila predloge:
+%  - brez \usepackage (vse pakete naloži editor.tex),
+%  - slike v Skupina30/img/, vse oznake in ključi virov z "g30:",
+%  - vire dodajte v skupno datoteko references.bib (z doi ali url).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\graphicspath{{Skupina30/img/}}
+
+\title{Koliko kubitov lahko prepletemo? Vpliv tehnik za blaženje napak na zvestobo stanj GHZ na kvantnem procesorju IBM}
+\titlerunning{Koliko kubitov lahko prepletemo?}
+\author{Veno Jakomin, Jure Pahor in Grega Potočnik}
+\maketitle
+
+\abstract{Stanje GHZ preplete vse kubite naenkrat in je zato občutljiv pokazatelj zmogljivosti kvantnega procesorja: že ena sama napaka faze uniči prepletenost, zvestoba nad $0{,}5$ pa dokazuje pristno večdelno prepletenost. Zanimalo nas je, pri kolikšnem številu kubitov procesor IBM to mejo še doseže in koliko jo premaknejo tri uveljavljene tehnike za blaženje napak -- dinamično razklapljanje, Paulijevo sukanje in ekstrapolacija na ničelni šum. Stanje smo pripravili na dva načina, z linearno verigo vrat CNOT in z drevesom BFS na grafu povezav procesorja, zvestobo pa izmerili iz populacij in amplitude paritetnih nihanj. [Glavni rezultat s številkami: pri katerem $n$ pade $F$ pod $0{,}5$ brez blaženja in z njim ter koliko procesorskega časa to stane.] [En stavek o pomenu rezultata.]}
+
+
+\section{Uvod}
+\label{g30:sec:uvod}
+
+Prepletenost je tisto, kar kvantni računalnik loči od klasičnega, zato je sposobnost priprave in ohranjanja prepletenih stanj neposredna mera zmogljivosti procesorja~\cite{nielsen2010}. Današnje naprave so pri tem omejene s šumom: vrata niso popolna, kubiti se razelektrijo in defazirajo, branje stanja pa se zmoti pri skoraj enem odstotku meritev. Preskill je to obdobje imenoval NISQ, torej doba hrupnih kvantnih naprav srednje velikosti~\cite{preskill2018}, in čeprav je bila leta 2024 prvič prikazana površinska koda, pri kateri logična napaka z večanjem kode pada~\cite{google2025below}, je popravljanje napak za naprave z nekaj sto kubiti še vedno predrago.
+
+Za preizkus prepletenosti se tradicionalno uporablja stanje GHZ,
+\begin{equation}
+\ket{\mathrm{GHZ}_n} = \frac{1}{\sqrt{2}}\left(\ket{0}^{\otimes n} + \ket{1}^{\otimes n}\right),
+\label{g30:eq:ghz}
+\end{equation}
+pri katerem so vsi kubiti hkrati v stanju \enquote{vse ničle} in \enquote{vse enice}. Takšno stanje je skrajno občutljivo: dovolj je, da se en sam kubit defazira, in relativna faza med obema členoma je izgubljena. Če je verjetnost defaziranja na kubit enaka $p$, koherenca pada kot $(1-2p)^n$, torej eksponentno s številom kubitov, zato ima vprašanje, koliko kubitov zmoremo prepletati, smiselno mejo.
+
+Mejo je mogoče postaviti natančno. Zvestoba $F = \bra{\mathrm{GHZ}}\rho\ket{\mathrm{GHZ}}$ nad $1/2$ je zadosten pogoj za pristno večdelno prepletenost (GME), saj nobeno stanje, ki je ločljivo na dve podmnožici kubitov, in nobena mešanica takih stanj ne doseže večjega prekrivanja z GHZ~\cite{g30:guhne2009}. Celotne gostotne matrike pri velikem $n$ ni mogoče izmeriti, zato se $F$ oceni iz populacij obeh robnih izidov in iz amplitude paritetnih nihanj, kar je metoda večkratnih kvantnih koherenc~\cite{g30:wei2020}. Na procesorjih IBM so to mejo že iskali: Kam in sodelavci so na napravah z do 414 kubiti brez detekcije napak potrdili GME pri 32 kubitih~\cite{g30:kam2024}, Javadi-Abhari in sodelavci pa so z detekcijo napak in post-selekcijo meritev prišli do 120 kubitov~\cite{g30:bigcats2025}. Obe skupini sta uporabili plitvejša vezja od naivne verige vrat CNOT, saj globina vezja neposredno določa, koliko časa stanje preživi v napravi.
+
+Kar v teh objavah ni razčlenjeno, je cena. Programsko okolje Qiskit Runtime danes ponuja blaženje napak kot nastavitev, ki jo uporabnik preprosto vklopi: dinamično razklapljanje, Paulijevo sukanje in ekstrapolacijo na ničelni šum~\cite{temme2017}. Vsaka od teh možnosti porabi dodaten procesorski čas, ki je pri brezplačnem paketu IBM Quantum Open Plan omejen na deset minut na račun, hkrati pa ekstrapolacija poda oceno in ne meritve, zato lahko negotovost rezultata poveča bolj, kot izboljša njegovo vrednost. Zanimalo nas je torej razmerje med pridobitvijo in ceno.
+
+\begin{svgraybox}
+\textbf{Raziskovalno vprašanje.} Pri kolikšnem največjem številu kubitov $n_{\mathrm{max}}$ procesor IBM pripravi stanje GHZ z zvestobo $F > 0{,}5$ in za koliko ter za kakšno ceno v procesorskem času to mejo premaknejo dinamično razklapljanje, Paulijevo sukanje in ekstrapolacija na ničelni šum?
+
+\textbf{Pričakovani rezultat.} S samim popravkom napak branja bo GME izgubljena pri približno 15--25 kubitih, razklapljanje in sukanje bosta $n_{\mathrm{max}}$ povečala za vsaj 30~\% za ceno večkratnega procesorskega časa. Ekstrapolacija bo ocenjeno zvestobo še povečala, a lahko zaradi večje negotovosti po pravilu $F - 2\sigma > 0{,}5$ mejo celo zmanjša. Plitvejše drevo BFS bo doseglo večji $n_{\mathrm{max}}$ kot linearna veriga vrat CNOT.
+\end{svgraybox}
+
+
+\section{Metode}
+\label{g30:sec:metode}
+
+\subsection{Orodja in nastavitve}
+\label{g30:sec:orodja}
+
+Vezja smo pripravili in izvedli v Qiskitu~\cite{qiskit2024}, vse simulacije in zagoni pa se nanašajo na procesor \texttt{ibm\_fez} iz družine Heron~r2 s 156 kubiti in 176 povezavami. Simulirali smo na njegovem odlitku \texttt{FakeFez} iz paketa \texttt{qiskit-ibm-runtime}, ki vsebuje kalibracijske podatke prave naprave in ga je zato mogoče uporabljati brez porabe procesorskega časa. Nastavitve, ki vplivajo na rezultat, so v tabeli~\ref{g30:tab:parametri}.
+
+\begin{table}[htbp]
+\caption{Orodja in nastavitve poskusa.}
+\label{g30:tab:parametri}
+\centering
+\begin{tabular}{lp{6.4cm}}
+\toprule
+Parameter & Vrednost \\
+\midrule
+procesor & \texttt{ibm\_fez} (Heron r2, 156 kubitov), odlitek \texttt{FakeFez} \\
+orodja & Python 3.12, Qiskit 2.6.2, Aer 0.18.4, IBM Runtime 0.52.1, mthree 3.0.0 \\
+prevajanje in simulacija & matrični produktni zapis stanja (MPS), stopnja optimizacije 1 \\
+ponovitve meritve & 4096 (idealni simulator), 1024 (šumni) \\
+koherenca & $2n+2$ faz, faktorji ojačanja šuma 1, 3, 5 \\
+razklapljanje & zaporedje XY4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Procesor zna izvesti le štiri vrste operacij, vse drugo prevajalnik razstavi nanje, zato se izplača pogledati njihove cene. Zasuk faze \texttt{rz} je na tej napravi brezplačen, saj se izvede kot sprememba reference signala in zato traja \SI{0}{\nano\second} brez izmerjene napake; enokubitni vrati \texttt{sx} in \texttt{x} trajata \SI{24}{\nano\second} pri mediani napake $2{,}3 \cdot 10^{-4}$, dvokubitna vrata \texttt{cz} \SI{84}{\nano\second}--\SI{104}{\nano\second} pri $3{,}9 \cdot 10^{-3}$, branje pa \SI{1560}{\nano\second} pri $7{,}6 \cdot 10^{-3}$. Ta zadnja številka je za nas ključna: pri 120 kubitih je verjetnost popolnoma pravilnega branja vseh kubitov le $(1-0{,}0076)^{120} \approx 0{,}40$, zato popravka napak branja ne obravnavamo kot izboljšavo, ampak kot del osnovne konfiguracije.
+
+\subsection{Priprava stanja GHZ in izbira kubitov}
+\label{g30:sec:vezja}
+
+Stanje~\eqref{g30:eq:ghz} smo pripravili na dva načina, prikazana na sliki~\ref{g30:fig:vezji}. Prvi je linearna veriga: na prvi kubit damo vrata $H$, nato pa z $n-1$ zaporednimi vrati CNOT superpozicijo prenesemo po verigi naprej, zato globina raste z $n$. Drugi način je drevo: superpozicijo širimo po drevesu BFS, zgrajenem na grafu povezav procesorja, in vrata, ki ne delijo kubitov, izvedemo vzporedno. Koren drevesa je kubit z najmanjšo ekscentričnostjo v izbranem podgrafu, tako kot pri Javadi-Abhariju in sodelavcih~\cite{g30:bigcats2025}, saj je globina drevesa takrat enaka polmeru podgrafa. Pri razvrščanju vrat v plasti je treba paziti na podrobnost, ki jo je enostavno spregledati: starš s tremi otroki ne more vseh treh vrat CNOT izvesti hkrati, ker so vsa na istem kontrolnem kubitu. V vsaki plasti zato vsak kubit nastopa največ enkrat, otroke pa obdelamo po padajoči velikosti poddrevesa, da se najdaljša veja začne čim prej.
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{quantikz}
+\lstick{$\ket{0}$} & \gate{H} & \ctrl{1} & \qw      & \qw      & \qw      & \qw \\
+\lstick{$\ket{0}$} & \qw      & \targ{}  & \ctrl{1} & \qw      & \qw      & \qw \\
+\lstick{$\ket{0}$} & \qw      & \qw      & \targ{}  & \ctrl{1} & \qw      & \qw \\
+\lstick{$\ket{0}$} & \qw      & \qw      & \qw      & \targ{}  & \ctrl{1} & \qw \\
+\lstick{$\ket{0}$} & \qw      & \qw      & \qw      & \qw      & \targ{}  & \qw
+\end{quantikz}}
+\caption{veriga}
+\label{g30:fig:veriga}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{quantikz}
+\lstick{$\ket{0}$} & \gate{H} & \ctrl{1} & \ctrl{2} & \qw      & \qw     & \qw \\
+\lstick{$\ket{0}$} & \qw      & \targ{}  & \qw      & \ctrl{2} & \qw     & \qw \\
+\lstick{$\ket{0}$} & \qw      & \qw      & \targ{}  & \qw      & \ctrl{2}& \qw \\
+\lstick{$\ket{0}$} & \qw      & \qw      & \qw      & \targ{}  & \qw     & \qw \\
+\lstick{$\ket{0}$} & \qw      & \qw      & \qw      & \qw      & \targ{} & \qw
+\end{quantikz}}
+\caption{drevo}
+\label{g30:fig:drevo}
+\end{subfigure}
+\caption{Priprava stanja GHZ za $n = 5$. Pri verigi~(a) se vrata izvajajo zaporedno, zato je globina sorazmerna s številom kubitov. Pri drevesu~(b) so vrata zaradi preglednosti narisana zaporedno, v izvedbi pa se vrata iste plasti izvedejo vzporedno: najprej $\{(0,1)\}$, nato $\{(0,2), (1,3)\}$ in nazadnje $\{(2,4)\}$, zato je globina enaka globini drevesa in ne številu kubitov.}
+\label{g30:fig:vezji}
+\end{figure}
+
+Kateri kubiti so uporabljeni, pri 156-kubitni napravi ni nepomembno, saj se napake posameznih vrat razlikujejo za več kot red velikosti. Graf povezav smo zato utežili z izmerjenimi napakami, povezave z napako vrat \texttt{cz} in vozlišča z napako branja. Za drevo iščemo povezan podgraf $n$ kubitov z najmanjšo vsoto teh uteži, in sicer s pohlepno rastjo po Primovem načelu iz vsakega možnega začetnega kubita, kar pri 156 kandidatih traja nekaj sekund; za verigo tega ne moremo uporabiti, ker potrebujemo pot in ne poljubnega povezanega podgrafa, zato uporabimo iskanje v globino z vračanjem, ki vedno najprej poskusi najcenejšega soseda.
+
+Posledica obeh izbir je v tabeli~\ref{g30:tab:vezja}. Število dvokubitnih vrat je v obeh primerih enako $n-1$ in nobena oblika ne potrebuje zamenjav SWAP, ker sta obe zgrajeni neposredno na grafu naprave, globina pa se razlikuje bistveno: pri 120 kubitih ima prevedena veriga globino 479, drevo pa 84, torej $5{,}7$-krat manj. Ker je zaporednih plasti vrat \texttt{cz} v verigi 119 in v drevesu 22, stanje v verigi obstaja približno \SI{11}{\micro\second}, v drevesu pa \SI{2}{\micro\second}; pri časih razpada $T_2$ okoli \SI{100}{\micro\second}--\SI{300}{\micro\second} je to razlika, ki jo pričakujemo tudi v zvestobi.
+
+\begin{table}[htbp]
+\caption{Lastnosti vezij pred prevajanjem in po prevajanju na \texttt{ibm\_fez} pri stopnji optimizacije 1. Število dvokubitnih vrat je enako pri obeh oblikah, globina pa ne.}
+\label{g30:tab:vezja}
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+ & & \multicolumn{2}{c}{pred prevajanjem} & \multicolumn{2}{c}{po prevajanju} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+Oblika & $n$ & CNOT & globina & CZ & globina \\
+\midrule
+veriga &  20 &  19 &  20 &  19 &  79 \\
+drevo  &  20 &  19 &   8 &  19 &  27 \\
+veriga & 120 & 119 & 120 & 119 & 479 \\
+drevo  & 120 & 119 &  22 & 119 &  84 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Merjenje zvestobe}
+\label{g30:sec:zvestoba}
+
+Zvestobo stanja GHZ sestavljata dva dela,
+\begin{equation}
+F = \frac{1}{2}\left(P_{0\ldots0} + P_{1\ldots1}\right) + \frac{1}{2}C,
+\label{g30:eq:zvestoba}
+\end{equation}
+kjer sta $P_{0\ldots0}$ in $P_{1\ldots1}$ verjetnosti obeh robnih izidov, $C = 2\left|\rho_{0\ldots0,\,1\ldots1}\right|$ pa koherenca~\cite{g30:wei2020}. Populaciji izmerimo neposredno v bazi $Z$ in povesta, ali so kubiti med sabo usklajeni, sami pa ne ločita prave superpozicije od klasične mešanice, pri kateri bi naprava polovico časa pripravila \enquote{vse ničle} in polovico \enquote{vse enice}; za to je potrebna koherenca.
+
+Koherence ni mogoče meriti neposredno, dobimo pa jo iz paritetnih nihanj. Na vsak kubit damo zasuk $R_z(\varphi)$, zaradi česar relativna faza niha $n$-krat hitreje od $\varphi$, in nato izmerimo opazljivko $X^{\otimes n}$:
+\begin{equation}
+\left\langle P(\varphi) \right\rangle = C \cos(n\varphi).
+\label{g30:eq:pariteta}
+\end{equation}
+Amplitudo tega nihanja odčitamo z diskretno Fourierovo vsoto pri frekvenci $n$,
+\begin{equation}
+C = \frac{2}{M}\left| \sum_{k=0}^{M-1} \left\langle P(\varphi_k) \right\rangle e^{-i n \varphi_k} \right|,
+\qquad \varphi_k = \frac{2\pi k}{M},
+\label{g30:eq:dft}
+\end{equation}
+pri čemer je število faz $M = 2n+2$. Manj faz ne zadošča: nihanje s frekvenco $n$ je treba vzorčiti nad Nyquistovo mejo, sicer se preslika v nižjo frekvenco in amplituda izpade napačna. Od tod izhaja tudi poraba procesorskega časa, saj je pri $n = 100$ samo za koherenco potrebnih 202 vezij, medtem ko populaciji zahtevata eno samo. Cenilka~\eqref{g30:eq:dft} ima pri tem lastnost, ki jo je treba upoštevati pri sklepanju: ker vzamemo absolutno vrednost kompleksne vsote, statistični šum dolžino vektorja v povprečju samo poveča, zato je ocena za $C$ navzgor pristranska, in to tem bolj, čim manj je ponovitev. V idealni simulaciji smo pri 4096 ponovitvah dobili vrednosti do $C = 1{,}003$, kar fizično ni mogoče.
+
+Odgovor na raziskovalno vprašanje zato sestavljajo štiri količine. \emph{Zvestoba} $F(n)$ z intervalom zaupanja, pri čemer negotovost populacij ocenimo z vzorčenjem bootstrap znotraj popravka mthree, negotovost koherence pa iz standardnih odklonov ocenjevalnika, pri ekstrapolaciji pa vključimo tudi negotovost prilagajanja. \emph{Pristnost večdelne prepletenosti} razglasimo šele ob pogoju $F - 2\sigma > 0{,}5$ in ne že pri $F > 0{,}5$. \emph{Mejo} $n_{\mathrm{max}}$ dobimo kot presečišče prilagojene krivulje $F(n)$ z vrednostjo $0{,}5$, skupaj z negotovostjo tega presečišča. \emph{Ceno} merimo s procesorskim časom iz metapodatkov nalog in jo izrazimo kot razmerje med pridobitvijo v $n_{\mathrm{max}}$ in dodatnim časom.
+
+\subsection{Blaženje napak in okolja poskusa}
+\label{g30:sec:blazenje}
+
+Vsa vezja smo izvedli v štirih konfiguracijah, ki se razlikujejo samo po nastavitvah blaženja napak, nikoli pa po vezju (tabela~\ref{g30:tab:konfiguracije}). Konfiguracije (i) do (iii) so meritve in lahko dokazujejo GME, konfiguracija (iv) pa tega ne more, ker je ekstrapolacija ocena, ki lahko $C$ preceni -- v naših poskusih smo dobili tudi vrednosti nad 1.
+
+\begin{table}[htbp]
+\caption{Konfiguracije blaženja napak. Vsaka naslednja doda eno tehniko k prejšnji.}
+\label{g30:tab:konfiguracije}
+\centering
+\begin{tabular}{clp{6.2cm}}
+\toprule
+ & Tehnike & Namen \\
+\midrule
+(i)   & popravek branja & osnovna meritev; mthree za populaciji, TREX za koherenco, vse drugo izklopljeno \\
+(ii)  & (i) + razklapljanje XY4 & pulzi na čakajočih kubitih zavrtijo počasni šum sam vase \\
+(iii) & (ii) + Paulijevo sukanje & koherentne napake se prevedejo v naključni Paulijev šum \\
+(iv)  & (iii) + ekstrapolacija & ocena koherence pri ničelnem šumu iz faktorjev 1, 3, 5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Ekstrapolacijo smo izvedli tudi sami, da jo lahko preizkusimo na simulatorju. Šum ojačamo s prepogibanjem vrat: vsaka vrata \texttt{cz} nadomestimo s $\lambda$ zaporednimi kopijami, in ker je CZ sam svoj inverz, je za lihe $\lambda$ vezje matematično nespremenjeno, fizično pa gre skozi $\lambda$-krat več šumnih vrat. Koherence pri $\lambda = 1, 3, 5$ nato ekstrapoliramo premico na $\lambda = 0$ in iz ostankov prilagajanja ocenimo negotovost te ocene, ki je sistematično večja od negotovosti gole meritve. Dve podrobnosti sta pri tem bistveni: prepogibanje mora biti izvedeno po prevajanju, prepognjeno vezje pa se pošlje v izvedbo brez ponovnega prevajanja, sicer prevajalnik trojico vrat takoj skrajša nazaj na ena.
+
+Vsako vezje gre skozi tri okolja. Na \textbf{idealnem simulatorju} najprej preverimo, da je pripravljeno stanje res GHZ: namesto primerjave z vektorjem stanja, ki pri 120 kubitih ne obstaja, izmerimo pričakovane vrednosti generatorjev stabilizatorske grupe, torej $X^{\otimes n}$ in $Z_0 Z_i$ za vse $i$. Stanje GHZ je edino stanje, pri katerem so vse te vrednosti enake 1, zato je to dokaz pravilnosti vezja in ne le vzorčni test; simulacija je mogoča, ker ima stanje GHZ vezno dimenzijo 2 in zato v matričnem produktnem zapisu porabi $O(n)$ namesto $2^n$ števil. Na \textbf{šumnem simulatorju} Aer s šumnim modelom naprave napovemo razpon $n$, v katerem zvestoba pade proti $0{,}5$, in preizkusimo lastno izvedbo ekstrapolacije. Tu je pomembno, da vezje pred simulacijo prevedemo na konkretne izbrane kubite, saj je šum vezan nanje; omejitev tega okolja pa je, da je šumni model markovski in ne vsebuje koherentnih napak, zato na njem učinka razklapljanja in sukanja ni mogoče ovrednotiti. Na \textbf{procesorju} nato izvedemo le tiste vrednosti $n$, ki jih izbere napoved simulatorja. Brezplačni paket Open Plan daje deset minut procesorskega časa na račun v 28 dneh, zato smo uporabili tri račune, vsa vezja za isti $n$ pa oddali v istem paketu, da se izvedejo pri enakih kalibracijskih pogojih.
+
+
+\section{Rezultati}
+\label{g30:sec:rezultati}
+
+[Jure: krivulje $F(n)$ za vsa tri okolja in obe obliki vezja, graf paritetnih nihanj pri izbranem $n$, tabela $n_{\mathrm{max}}$ po konfiguracijah (i)--(iv) s procesorskim časom, primerjava z objavljenimi 32~\cite{g30:kam2024} in 120 kubiti~\cite{g30:bigcats2025}. Vsako sliko in tabelo omeni v besedilu.]
+
+
+\section{Razprava}
+\label{g30:sec:razprava}
+
+[Odgovor na raziskovalno vprašanje s številkami in primerjava s hipotezo iz uvoda. Omejitve: markovski šumni model brez koherentnih napak, majhno število vrednosti $n$ zaradi omejenega procesorskega časa, odvisnost rezultata od kalibracije na dan izvedbe.]
+
+\subsection{Kaj ni delovalo}
+\label{g30:sec:neuspehi}
+
+[Kandidata, ki sta se pokazala med delom: (a) na šumnem simulatorju sta veriga in drevo do $n = 24$ dala praktično enako zvestobo, čeprav se globini razlikujeta za faktor~5, in šele pri $n = 28$ in $n = 32$ se je pokazala prednost drevesa (0,034 oziroma 0,039) -- domnevamo, da šumni model brez eksplicitnih zakasnitev časa čakanja ne upošteva, zato je v simulaciji vidna predvsem enaka cena enako velikega števila vrat; (b) prvotna izvedba ekstrapolacije pred prevajanjem, pri kateri je prevajalnik prepognjena vrata takoj odstranil. Dopolni s tistim, kar se bo pokazalo na procesorju.]
+
+
+\section{Zaključek}
+\label{g30:sec:zakljucek}
+
+[Glavni rezultat v nekaj stavkih in predlog nadaljevanja, npr. detekcija napak s post-selekcijo ali afino prilagojena vezja na novejših procesorjih.]
+
+
+\section*{Doprinosi avtorjev}
+
+Veno Jakomin je zasnoval in implementiral vezji za pripravo stanja GHZ ter izbiro kubitov na grafu naprave, izvedel idealne in šumne simulacije z lastno izvedbo ekstrapolacije na ničelni šum ter napisal poglavji~\ref{g30:sec:uvod} in~\ref{g30:sec:metode}.
+
+[Jure Pahor: cevovod za merjenje zvestobe, prilagajanje krivulje $F(n)$ in $n_{\mathrm{max}}$, slike in poglavje~\ref{g30:sec:rezultati}.]
+
+[Grega Potočnik: nastavitve blaženja napak v Qiskit Runtime, testna naloga in spremljanje porabe, oddaja nalog na procesor, beleženje identifikatorjev nalog in kalibracij, podpoglavje~\ref{g30:sec:neuspehi}.]
