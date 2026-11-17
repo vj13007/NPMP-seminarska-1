@@ -16,7 +16,71 @@ uv venv
 VIRTUAL_ENV=.venv uv pip install -r koda/requirements.txt
 ```
 
-Brez uv enako deluje `python3 -m venv .venv && source .venv/bin/activate && pip install -r koda/requirements.txt`. Potreben je Python 3.12 ali novejši. Za zagon na pravem procesorju je potreben še račun IBM Quantum s shranjenim žetonom; simulacije delujejo brez njega.
+Brez uv enako deluje `python3 -m venv .venv && source .venv/bin/activate && pip install -r koda/requirements.txt`. Potreben je Python 3.12 ali novejši. Simulacije delujejo brez računa IBM; za zagon na pravem procesorju glej naslednje poglavje.
+
+## Zagon na procesorju IBM
+
+Procesorski čas je omejen (Open Plan: 10 minut v 28 dneh na račun), zato vsak član oddaja svoj nabor n s svojega računa in nikoli ne odda ničesar brez predhodnega izpisa ocene porabe.
+
+### 1. Račun IBM Quantum (enkrat na člana)
+
+1. Na [quantum.cloud.ibm.com](https://quantum.cloud.ibm.com) se registriraj z IBMid.
+2. Ustvari instanco (*Instances* → *Create instance*) z brezplačnim paketom **Open Plan** in iz seznama instanc kopiraj njen CRN.
+3. Na nadzorni plošči ustvari ključ API (*API key* → *Create*) in ga takoj kopiraj, ker ga kasneje ni več mogoče prebrati.
+
+### 2. Shranjevanje računa (zunaj repozitorija)
+
+Program bere račune iz datoteke `qiskit-ibm.json` v mapi **nad** repozitorijem (`../qiskit-ibm.json` glede na koren repozitorija), da ključ nikoli ne pride v git. Vsak član shrani svoj račun pod svojim imenom (`grega`, `jure`, `veno`); ključ in CRN program vpraša, zato ne ostaneta v zgodovini ukazov:
+
+```bash
+cd koda && ../.venv/bin/python -c "
+from getpass import getpass
+from qiskit_ibm_runtime import QiskitRuntimeService
+from oddaja import RACUNI
+QiskitRuntimeService.save_account(channel='ibm_quantum_platform', token=getpass('kljuc API: '),
+    instance=input('CRN instance: ') or None, filename=str(RACUNI), name='grega', overwrite=True)
+"
+chmod 600 ../../qiskit-ibm.json
+```
+
+### 3. Preverjanje povezave (ne porabi procesorskega časa)
+
+```bash
+cd koda && ../.venv/bin/python -c "
+from qiskit_ibm_runtime import QiskitRuntimeService
+from oddaja import RACUNI
+s = QiskitRuntimeService(filename=str(RACUNI), name='grega')
+b = s.backend('ibm_fez')
+print(b.name, 'deluje:', b.status().operational, 'v vrsti:', b.status().pending_jobs)
+print('preostanek:', s.usage().get('usage_remaining_seconds'), 's')
+"
+```
+
+### 4. Oddaja
+
+Program teče, dokler IBM ne vrne vseh rezultatov, kar je ob polni vrsti lahko več ur, zato ga poženemo v `tmux` (`Ctrl+B`, nato `D` odklopi; `tmux attach -t oddaja` vrne). Ne uporabljaj `nohup`, ker program pred oddajo čaka na potrditev.
+
+```bash
+tmux new -s oddaja
+cd koda
+../.venv/bin/python oddaja.py 16 --suho                                   # lokalno, brez računa: kubiti, možnosti, ponovitve
+../.venv/bin/python oddaja.py 16 --racun grega                            # drevo, konfiguracije (i)-(iv)
+../.venv/bin/python oddaja.py 16 24 --oblika veriga --konf i --racun grega # veriga, samo (i)
+```
+
+Pred potrditvijo (`da`) preveri izpis: izbrane kubite (izbrani so iz današnje kalibracije naprave), tabelo vklopljenih tehnik po konfiguracijah ter število nalog, strelov, oceno porabe in preostanek na računu. Program sam zavrne oddajo, če ocena s 30 % rezervo preseže preostanek. Po potrditvi počaka še na kalibracijo mthree in zaključi z izpisom `zabelezeno v rezultati/naloge.csv`; do takrat terminala ne zapiraj, ker se sicer kalibracija mthree izgubi.
+
+Po prvi oddaji večjega n primerjaj dejansko porabo v stolpcu `cas_qpu` z oceno in po potrebi popravi `SEKUND_NA_NALOGO` in `SEKUND_NA_STREL` v `oddaja.py`.
+
+### 5. Po prekinitvi in po koncu
+
+```bash
+cd koda && ../.venv/bin/python oddaja.py --dokoncaj --racun grega   # prenese in zabeleži manjkajoče rezultate
+cd koda && ../.venv/bin/python procesor.py rezultati/naloge.csv     # zvestoba za vse oddane n
+cd koda && ../.venv/bin/python analiza.py                           # prileganje F(n) in meja n_max
+```
+
+Mapo `koda/rezultati/` (rezultati, kalibracije, lastnosti naprave, `oddane.csv`, `naloge.csv`) dodamo v git, ker poročilo potrebuje identifikatorje nalog, napravo in število ponovitev.
 
 ## Programi
 
@@ -96,11 +160,11 @@ Za vsak n v enem paketu (`Batch`) odda vse naloge na istih vezjih in kubitih: Sa
 
 Pred oddajo vse naloge lokalno pripravi natanko tako, kot jih primitivi pripravijo pred pošiljanjem, s čimer preveri možnosti in prešteje strele. Porabo oceni kot `SEKUND_NA_NALOGO` na nalogo in `SEKUND_NA_STREL` na strel (konstanti nastavimo iz testne naloge). Če ocena, povečana za 30 %, presega preostanek časa na računu, ne odda ničesar; sicer izpiše oceno in zahteva potrditev. Suha oddaja na strežniku (`dry_run`) za račune Open Plan ni na voljo. Vsako oddano nalogo takoj vpiše v `oddane.csv`, zato se ob prekinitvi nič ne izgubi: `--dokoncaj` shrani in zabeleži vse oddane naloge, ki še niso v `naloge.csv`.
 
-Podatki za račun IBM so v `../../qiskit-ibm.json` (zunaj repozitorija), vsak član pod svojim imenom.
+Nastavitev računa in potek oddaje sta opisana v poglavju [Zagon na procesorju IBM](#zagon-na-procesorju-ibm).
 
 ```bash
 cd koda && python oddaja.py 4 8 --suho                         # izpis na FakeFez, brez oddaje
-cd koda && python oddaja.py 4 --racun grega                    # suha oddaja, ocena, potrditev, oddaja
+cd koda && python oddaja.py 4 --racun grega                    # priprava, ocena porabe, potrditev, oddaja
 cd koda && python oddaja.py --dokoncaj --racun grega           # dokonca belezenje po prekinitvi
 # -> rezultati/
 ```
@@ -125,7 +189,9 @@ Vhodna tabela potrebuje stolpce n, oblika in F; stolpci konfiguracija, F_napaka,
 | `idealno.csv` | najmanjša pričakovana vrednost stabilizatorja, populaciji P0 in P1, koherenca C, zvestoba F |
 | `rezultati_sum.csv` | P0, P1, C in F na šumnem modelu, koherence pri faktorjih 1, 3 in 5 ter ekstrapolirani C_zne in F_zne |
 | `rezultati_zvestoba.csv` | populaciji z mthree, koherenca iz Estimatorja, F z napako in zastavica GME; za primerjavo koherenca iz Samplerja ter surovi populaciji |
-| `naloge.csv` | ena vrstica na nalogo s procesorja: n, oblika, konfiguracija, primitiv, identifikator, datoteka, kubiti, ponovitve, čas QPU, kalibracija |
+| `rezultati/oddane.csv` | ena vrstica na nalogo, zapisana takoj ob oddaji; osnova za `--dokoncaj` |
+| `rezultati/naloge.csv` | ena vrstica na zabeleženo nalogo: n, oblika, konfiguracija, primitiv, identifikator, datoteka, kubiti, ponovitve, čas QPU, kalibracija, naprava, račun, čas oddaje, lastnosti naprave |
+| `rezultati/*.json` | rezultati nalog, kalibracije mthree (`kalibracija_*`) in lastnosti naprave ob izvedbi (`lastnosti_*`) |
 | `rezultati_procesor.csv` | isti stolpci kot `rezultati_zvestoba.csv` ter konfiguracija, zastavica popravka mthree, čas QPU in identifikatorji nalog |
 | `analiza.csv` | po okolju, obliki in konfiguraciji: parametra a in n0, meja n_max z napako in percentiloma, zastavica ekstrapolacije, izmerjena meja, verjetnost defaziranja p, čas QPU ter razlika meje in časa proti konfiguraciji (i) |
 
