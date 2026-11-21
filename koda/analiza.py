@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import sys
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -154,8 +154,14 @@ def dodaj_primerjavo(analiza: pd.DataFrame) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    datoteke = {Path(p).stem.removeprefix("rezultati_"): p for p in sys.argv[1:]} or DATOTEKE
+    ap = argparse.ArgumentParser(description="Prileganje F(n), prag n_max in primerjava konfiguracij.")
+    ap.add_argument("datoteke", nargs="*")
+    ap.add_argument("--do", type=int, help="upostevaj le n <= DO (primerjava na enakem razponu n)")
+    a = ap.parse_args()
+    datoteke = {Path(p).stem.removeprefix("rezultati_"): p for p in a.datoteke} or DATOTEKE
     rezultati = nalozi_rezultate(datoteke)
+    if a.do is not None:
+        rezultati = rezultati[rezultati["n"] <= a.do]
 
     vrstice = [analiziraj_skupino(skupina) for _, skupina
                in rezultati.groupby(["okolje", "oblika", "konfiguracija"], sort=True)]
@@ -170,4 +176,4 @@ if __name__ == "__main__":
               f"{int(r.ekstrapolirano) if np.isfinite(r.ekstrapolirano) else '-':>4} "
               f"{r.n_gme:5.0f} {r.p:7.4f} {r.cas_qpu:8.1f}")
 
-    analiza[GLAVA].to_csv(IZHOD, index=False)
+    analiza[GLAVA].to_csv(IZHOD if a.do is None else f"analiza_do{a.do}.csv", index=False)

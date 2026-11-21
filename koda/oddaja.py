@@ -91,18 +91,19 @@ def oddaj(v: Vezja, n: int, oblika: str, konfiguracije: list[str], backend, racu
     skupno = dict(n=n, oblika=oblika, kubiti=";".join(map(str, v.kubiti)), racun=racun, lastnosti=lastnosti)
 
     with Batch(backend=backend) as paket:
-        for konf, primitiv, pubi in naloge(v, n, konfiguracije):
-            naloga = PRIMITIVI[primitiv][0](mode=paket, options=moznosti(konf, primitiv)).run(pubi)
-            dodaj_nalogo(mapa / ODDANE, konfiguracija=konf, primitiv=primitiv, naloga=naloga.job_id(),
-                         ponovitev=moznosti(konf, primitiv)["default_shots"],
-                         kalibracija=kalibracija if primitiv == "sampler" else "", **skupno)
-            print(f"  oddano ({konf}) {primitiv}: {naloga.job_id()}")
+        # kalibracija prva, da populacije lahko popravimo tudi, ce paket ne pride do konca
         try:
             for naloga in kalibriraj(backend, v.kubiti, mapa / kalibracija, paket=paket):
                 dodaj_nalogo(mapa / ODDANE, primitiv="kalibracija", naloga=naloga.job_id(),
                              ponovitev=PONOVITEV, kalibracija=kalibracija, **skupno)
         except Exception as napaka:
             print(f"NAPAKA pri kalibraciji mthree: {napaka}", file=sys.stderr)
+        for konf, primitiv, pubi in naloge(v, n, konfiguracije):
+            naloga = PRIMITIVI[primitiv][0](mode=paket, options=moznosti(konf, primitiv)).run(pubi)
+            dodaj_nalogo(mapa / ODDANE, konfiguracija=konf, primitiv=primitiv, naloga=naloga.job_id(),
+                         ponovitev=moznosti(konf, primitiv)["default_shots"],
+                         kalibracija=kalibracija if primitiv == "sampler" else "", **skupno)
+            print(f"  oddano ({konf}) {primitiv}: {naloga.job_id()}")
 
 
 def dokoncaj(mapa: Path, naloga_po_id) -> None:

@@ -3,6 +3,8 @@ from __future__ import annotations
 import numpy as np
 from qiskit import QuantumCircuit, transpile
 from qiskit.circuit import Parameter
+from qiskit.transpiler import PassManager
+from qiskit.transpiler.passes import ALAPScheduleAnalysis, PadDelay
 from qiskit_aer import AerSimulator
 from qiskit_ibm_runtime.fake_provider import FakeFez
 
@@ -50,7 +52,18 @@ def prepogni_cz(vezje: QuantumCircuit, faktor: int) -> QuantumCircuit:
     return nov
 
 
-def prevedena_vezja(n: int, oblika: str) -> tuple[QuantumCircuit, QuantumCircuit]:
+def z_zakasnitvami(vezje: QuantumCircuit, kubiti: list[int]) -> QuantumCircuit:
+    """Vezje z eksplicitnimi zakasnitvami (ALAP) na mirujocih uporabljenih kubitih, da jih Aer sumi."""
+    razvrsceno = PassManager([ALAPScheduleAnalysis(target=NAPRAVA.target),
+                              PadDelay(target=NAPRAVA.target)]).run(vezje)
+    nov = razvrsceno.copy_empty_like()
+    for u in razvrsceno.data:
+        if u.operation.name != "delay" or razvrsceno.find_bit(u.qubits[0]).index in kubiti:
+            nov.append(u)
+    return nov
+
+
+def prevedena_vezja(n: int, oblika: str, zakasnitve: bool = False) -> tuple[QuantumCircuit, QuantumCircuit]:
     """Prevedeno vezje za populaciji in parametrizirano vezje za paritetne meritve."""
     vezje, kubiti = osnovno_vezje(n, oblika)
 
@@ -63,8 +76,8 @@ def prevedena_vezja(n: int, oblika: str) -> tuple[QuantumCircuit, QuantumCircuit
         paritetno.h(q)
     paritetno.measure_all()
 
-    return tuple(transpile([populacijsko, paritetno], NAPRAVA,
-                           initial_layout=kubiti, optimization_level=1))
+    prevedena = transpile([populacijsko, paritetno], NAPRAVA, initial_layout=kubiti, optimization_level=1)
+    return tuple(z_zakasnitvami(v, kubiti) for v in prevedena) if zakasnitve else tuple(prevedena)
 
 
 def pariteta(stevci: dict[str, int]) -> float:
@@ -93,10 +106,12 @@ def ekstrapoliraj(faktorji: tuple[int, ...], vrednosti: list[float]) -> tuple[fl
 
 
 def meritev(n: int, oblika: str, ponovitev: int = 1024, faktorji: tuple[int, ...] = FAKTORJI,
-            sim: AerSimulator | None = None) -> dict[str, float]:
+            sim: AerSimulator | None = None, zakasnitve: bool = False) -> dict[str, float]:
     """Zvestoba brez blazenja in z rocnim ZNE na koherenci; vsa vezja v enem zagonu."""
+    if zakasnitve and faktorji != (1,):
+        raise ValueError("prepogibanje bi porusilo razvrstitev zakasnitev; uporabi faktorji=(1,)")
     sim = sim or simulator()
-    populacijsko, paritetno = prevedena_vezja(n, oblika)
+    populacijsko, paritetno = prevedena_vezja(n, oblika, zakasnitve)
     phi = faze(n)
 
     vezja = [populacijsko]
@@ -113,11 +128,11 @@ def meritev(n: int, oblika: str, ponovitev: int = 1024, faktorji: tuple[int, ...
         odsek = stevci[1 + i * len(phi): 1 + (i + 1) * len(phi)]
         koherence.append(koherenca(n, np.array([pariteta(s) for s in odsek])))
 
-    c0, napaka = ekstrapoliraj(faktorji, koherence)
     rezultat = {"n": float(n), "P0": p0, "P1": p1, "C": koherence[0],
-                "F": 0.5 * (p0 + p1) + 0.5 * koherence[0],
-                "C_zne": c0, "C_zne_napaka": napaka,
-                "F_zne": 0.5 * (p0 + p1) + 0.5 * c0}
+                "F": 0.5 * (p0 + p1) + 0.5 * koherence[0]}
+    if len(faktorji) > 1:
+        c0, napaka = ekstrapoliraj(faktorji, koherence)
+        rezultat.update(C_zne=c0, C_zne_napaka=napaka, F_zne=0.5 * (p0 + p1) + 0.5 * c0)
     for faktor, c in zip(faktorji, koherence):
         rezultat[f"C_{faktor}"] = c
     return rezultat
@@ -126,6 +141,26 @@ def meritev(n: int, oblika: str, ponovitev: int = 1024, faktorji: tuple[int, ...
 if __name__ == "__main__":
     import csv
     import sys
+
+    if "--zakasnitve" in sys.argv:
+        # isto vezje brez in z zakasnitvami mirujocih kubitov, le faktor 1
+        nabor = [int(x) for x in sys.argv[1:] if x.isdigit()] or [16, 24, 32]
+        sim = simulator()
+        vrstice = []
+        for n in nabor:
+            for oblika in ("veriga", "drevo"):
+                for zak in (False, True):
+                    r = meritev(n, oblika, faktorji=(1,), sim=sim, zakasnitve=zak)
+                    r.update(oblika=oblika, zakasnitve=int(zak))
+                    vrstice.append(r)
+                    print(f"{n:>4} {oblika:8} zakasnitve={int(zak)} P0+P1={r['P0'] + r['P1']:.4f} "
+                          f"C={r['C']:.4f} F={r['F']:.4f}", flush=True)
+        with open("rezultati_sum_zakasnitve.csv", "w", newline="") as f:
+            pisec = csv.DictWriter(f, fieldnames=["n", "oblika", "zakasnitve", "P0", "P1", "C", "F"],
+                                   extrasaction="ignore")
+            pisec.writeheader()
+            pisec.writerows(vrstice)
+        sys.exit()
 
     nabor = [int(x) for x in sys.argv[1:]] or [4, 8, 12, 16, 20, 24, 28, 32]
     sim = simulator()

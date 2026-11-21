@@ -17,7 +17,7 @@ STOLPCI_NALOG = ["n", "oblika", "konfiguracija", "primitiv", "naloga", "datoteka
                  "ponovitev", "cas_qpu", "kalibracija", "backend", "racun", "cas_oddaje", "lastnosti"]
 GLAVA = ["n", "oblika", "konfiguracija", "P0", "P1", "P_napaka", "C", "C_napaka", "F", "F_napaka",
          "GME", "C_sampler", "C_sampler_napaka", "P0_surovo", "P1_surovo", "mthree", "cas_qpu",
-         "nalogi"]
+         "nalogi", "paket"]
 
 
 # belezenje nalog ob oddaji (uporabi oddajni program)
@@ -162,13 +162,17 @@ if __name__ == "__main__":
           f"{'GME':>4} {'m3':>3} {'QPU [s]':>8}")
 
     meritve = naloge[naloge.primitiv != "kalibracija"]
-    for (n, oblika, konf), skupina in meritve.groupby(["n", "oblika", "konfiguracija"], sort=True):
+    # paket (posnetek lastnosti) loci ponovljene zagone istega n, oblike in konfiguracije
+    for (n, oblika, konf, paket), skupina in meritve.groupby(["n", "oblika", "konfiguracija", "lastnosti"],
+                                                               sort=True):
         if konf == "iv":
             # (iv) se razlikuje le pri C, populaciji vzame iz Samplerja (iii)
             skupina = pd.concat([skupina, meritve[(meritve.n == n) & (meritve.oblika == oblika) &
+                                                  (meritve.lastnosti == paket) &
                                                   (meritve.konfiguracija == "iii") &
                                                   (meritve.primitiv == "sampler")]])
         r = oceni_skupino(skupina, mapa, mitigatorji)
+        r["paket"] = paket.removeprefix("lastnosti_").removesuffix(".json")
         vrstice.append(r)
         print(f"{r['n']:>4} {r['oblika']:8} {r['konfiguracija']:5} {r['P0']:7.4f} {r['P1']:7.4f} "
               f"{r['C']:7.4f} {r['F']:7.4f} {r['F_napaka']:7.4f} {r['GME']:>4.0f} "
