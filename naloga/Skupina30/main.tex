@@ -14,7 +14,7 @@
 \author{Veno Jakomin, Jure Pahor in Grega Potočnik}
 \maketitle
 
-\abstract{Stanje GHZ preplete vse kubite naenkrat in je zato občutljiv pokazatelj zmogljivosti kvantnega procesorja: že ena sama napaka faze uniči prepletenost, zvestoba nad $0{,}5$ pa dokazuje pristno večdelno prepletenost. Zanimalo nas je, pri kolikšnem številu kubitov procesor IBM to mejo še doseže in koliko jo premaknejo tri uveljavljene tehnike za blaženje napak -- dinamično razklapljanje, Paulijevo sukanje in ekstrapolacija na ničelni šum. Stanje smo pripravili na dva načina, z linearno verigo vrat CNOT in z drevesom BFS na grafu povezav procesorja, zvestobo pa izmerili iz populacij in amplitude paritetnih nihanj. [Glavni rezultat s številkami: pri katerem $n$ pade $F$ pod $0{,}5$ brez blaženja in z njim ter koliko procesorskega časa to stane.] [En stavek o pomenu rezultata.]}
+\abstract{Stanje GHZ preplete vse kubite naenkrat in je zato občutljiv pokazatelj zmogljivosti kvantnega procesorja: že defaziranje enega samega kubita uniči koherenco med obema členoma, zvestoba nad $0{,}5$ pa dokazuje pristno večdelno prepletenost. Zanimalo nas je, pri kolikšnem številu kubitov procesor IBM to mejo še doseže in koliko jo premaknejo tri uveljavljene tehnike za blaženje napak -- dinamično razklapljanje, Paulijevo sukanje in ekstrapolacija na ničelni šum. Stanje smo pripravili na dva načina, z linearno verigo vrat CNOT in z drevesom BFS na grafu povezav procesorja, zvestobo pa izmerili iz populacij in amplitude paritetnih nihanj. Na procesorju \texttt{ibm\_fez} je drevo BFS s samim popravkom napak branja v posameznem zagonu doseglo pristno večdelno prepletenost pri 40 kubitih, linearna veriga pa pri 16 kubitih in pri 32 ne več. Dinamično razklapljanje in Paulijevo sukanje procesorskega časa nista podaljšala, a sta zvestobo znižala pri obeh oblikah vezja in mejo za drevo s 40 znižala na največ 32 kubitov. Ekstrapolacija na ničelni šum je porabo skoraj podvojila (\SI{123}{\second} proti \SI{64}{\second}), ocenjena koherenca pa je bila višja od izmerjene le do 24 kubitov. Drevo je bilo pri enakem številu vrat in podobnih napakah kubitov boljše od verige, s simulacijo pa smo pokazali, da ju v šumnem modelu loči čas, ko kubiti mirujejo.}
 
 
 \section{Uvod}
@@ -31,7 +31,7 @@ pri katerem so vsi kubiti hkrati v stanju \enquote{vse ničle} in \enquote{vse e
 
 Mejo je mogoče postaviti natančno. Zvestoba $F = \bra{\mathrm{GHZ}}\rho\ket{\mathrm{GHZ}}$ nad $1/2$ je zadosten pogoj za pristno večdelno prepletenost (GME), saj nobeno stanje, ki je ločljivo na dve podmnožici kubitov, in nobena mešanica takih stanj ne doseže večjega prekrivanja z GHZ~\cite{g30:guhne2009}. Celotne gostotne matrike pri velikem $n$ ni mogoče izmeriti, zato se $F$ oceni iz populacij obeh robnih izidov in iz amplitude paritetnih nihanj, kar je metoda večkratnih kvantnih koherenc~\cite{g30:wei2020}. Na procesorjih IBM so to mejo že iskali: Kam in sodelavci so na napravah z do 414 kubiti brez detekcije napak potrdili GME pri 32 kubitih~\cite{g30:kam2024}, Javadi-Abhari in sodelavci pa so z detekcijo napak in post-selekcijo meritev prišli do 120 kubitov~\cite{g30:bigcats2025}. Obe skupini sta uporabili plitvejša vezja od naivne verige vrat CNOT, saj globina vezja neposredno določa, koliko časa stanje preživi v napravi.
 
-Kar v teh objavah ni razčlenjeno, je cena. Programsko okolje Qiskit Runtime danes ponuja blaženje napak kot nastavitev, ki jo uporabnik preprosto vklopi: dinamično razklapljanje, Paulijevo sukanje in ekstrapolacijo na ničelni šum~\cite{temme2017}. Vsaka od teh možnosti porabi dodaten procesorski čas, ki je pri brezplačnem paketu IBM Quantum Open Plan omejen na deset minut na račun, hkrati pa ekstrapolacija poda oceno in ne meritve, zato lahko negotovost rezultata poveča bolj, kot izboljša njegovo vrednost. Zanimalo nas je torej razmerje med pridobitvijo in ceno.
+Kar v teh objavah ni razčlenjeno, je cena. Programsko okolje Qiskit Runtime danes ponuja blaženje napak kot nastavitev, ki jo uporabnik preprosto vklopi: dinamično razklapljanje, Paulijevo sukanje in ekstrapolacijo na ničelni šum~\cite{temme2017}. Vsaka od teh možnosti porabi dodaten procesorski čas, ki je pri brezplačnem načrtu IBM Quantum Open Plan omejen na deset minut na račun, hkrati pa ekstrapolacija poda oceno in ne meritve, zato lahko negotovost rezultata poveča bolj, kot izboljša njegovo vrednost. Zanimalo nas je torej razmerje med pridobitvijo in ceno.
 
 \begin{svgraybox}
 \textbf{Raziskovalno vprašanje.} Pri kolikšnem največjem številu kubitov $n_{\mathrm{max}}$ procesor IBM pripravi stanje GHZ z zvestobo $F > 0{,}5$ in za koliko ter za kakšno ceno v procesorskem času to mejo premaknejo dinamično razklapljanje, Paulijevo sukanje in ekstrapolacija na ničelni šum?
@@ -59,7 +59,7 @@ Parameter & Vrednost \\
 procesor & \texttt{ibm\_fez} (Heron r2, 156 kubitov), odlitek \texttt{FakeFez} \\
 orodja & Python 3.12, Qiskit 2.6.2, Aer 0.18.4, IBM Runtime 0.52.1, mthree 3.0.0 \\
 prevajanje in simulacija & matrični produktni zapis stanja (MPS), stopnja optimizacije 1 \\
-ponovitve meritve & 4096 (idealni simulator), 1024 (šumni) \\
+ponovitve meritve & 4096 (idealni simulator), 1024 (šumni); na procesorju 4096 za populaciji, 512 na fazo za koherenco in 1024 za kalibracijo mthree \\
 koherenca & $2n+2$ faz, faktorji ojačanja šuma 1, 3, 5 \\
 razklapljanje & zaporedje XY4 \\
 \bottomrule
@@ -151,7 +151,7 @@ C = \frac{2}{M}\left| \sum_{k=0}^{M-1} \left\langle P(\varphi_k) \right\rangle e
 \end{equation}
 pri čemer je število faz $M = 2n+2$. Manj faz ne zadošča: nihanje s frekvenco $n$ je treba vzorčiti nad Nyquistovo mejo, sicer se preslika v nižjo frekvenco in amplituda izpade napačna. Od tod izhaja tudi poraba procesorskega časa, saj je pri $n = 100$ samo za koherenco potrebnih 202 vezij, medtem ko populaciji zahtevata eno samo. Cenilka~\eqref{g30:eq:dft} ima pri tem lastnost, ki jo je treba upoštevati pri sklepanju: ker vzamemo absolutno vrednost kompleksne vsote, statistični šum dolžino vektorja v povprečju samo poveča, zato je ocena za $C$ navzgor pristranska, in to tem bolj, čim manj je ponovitev. V idealni simulaciji smo pri 4096 ponovitvah dobili vrednosti do $C = 1{,}003$, kar fizično ni mogoče.
 
-Odgovor na raziskovalno vprašanje zato sestavljajo štiri količine. \emph{Zvestoba} $F(n)$ z intervalom zaupanja, pri čemer negotovost populacij ocenimo z vzorčenjem bootstrap znotraj popravka mthree, negotovost koherence pa iz standardnih odklonov ocenjevalnika, pri ekstrapolaciji pa vključimo tudi negotovost prilagajanja. \emph{Pristnost večdelne prepletenosti} razglasimo šele ob pogoju $F - 2\sigma > 0{,}5$ in ne že pri $F > 0{,}5$. \emph{Mejo} $n_{\mathrm{max}}$ dobimo kot presečišče prilagojene krivulje $F(n)$ z vrednostjo $0{,}5$, skupaj z negotovostjo tega presečišča. \emph{Ceno} merimo s procesorskim časom iz metapodatkov nalog in jo izrazimo kot razmerje med pridobitvijo v $n_{\mathrm{max}}$ in dodatnim časom.
+Odgovor na raziskovalno vprašanje zato sestavljajo štiri količine. \emph{Zvestoba} $F(n)$ z intervalom zaupanja, pri čemer negotovost populacij ocenimo z vzorčenjem bootstrap znotraj popravka mthree, negotovost koherence pa iz standardnih odklonov ocenjevalnika, pri ekstrapolaciji pa vključimo tudi negotovost prilagajanja. \emph{Pristnost večdelne prepletenosti} razglasimo šele ob pogoju $F - 2\sigma > 0{,}5$ in ne že pri $F > 0{,}5$. \emph{Mejo} $n_{\mathrm{max}}$ podajamo kot največji izmerjeni $n$, pri katerem ta pogoj velja; prvotno smo jo nameravali določiti kot presečišče prilagojene krivulje $F(n)$ z $0{,}5$, kar se je izkazalo za nezanesljivo (razdelek~\ref{g30:sec:neuspehi}). \emph{Ceno} merimo s procesorskim časom iz metapodatkov nalog, za vsako konfiguracijo posebej.
 
 \subsection{Blaženje napak in okolja poskusa}
 \label{g30:sec:blazenje}
@@ -176,7 +176,83 @@ Vsa vezja smo izvedli v štirih konfiguracijah, ki se razlikujejo samo po nastav
 
 Ekstrapolacijo smo izvedli tudi sami, da jo lahko preizkusimo na simulatorju. Šum ojačamo s prepogibanjem vrat: vsaka vrata \texttt{cz} nadomestimo s $\lambda$ zaporednimi kopijami, in ker je CZ sam svoj inverz, je za lihe $\lambda$ vezje matematično nespremenjeno, fizično pa gre skozi $\lambda$-krat več šumnih vrat. Koherence pri $\lambda = 1, 3, 5$ nato ekstrapoliramo premico na $\lambda = 0$ in iz ostankov prilagajanja ocenimo negotovost te ocene, ki je sistematično večja od negotovosti gole meritve. Dve podrobnosti sta pri tem bistveni: prepogibanje mora biti izvedeno po prevajanju, prepognjeno vezje pa se pošlje v izvedbo brez ponovnega prevajanja, sicer prevajalnik trojico vrat takoj skrajša nazaj na ena.
 
-Vsako vezje gre skozi tri okolja. Na \textbf{idealnem simulatorju} najprej preverimo, da je pripravljeno stanje res GHZ: namesto primerjave z vektorjem stanja, ki pri 120 kubitih ne obstaja, izmerimo pričakovane vrednosti generatorjev stabilizatorske grupe, torej $X^{\otimes n}$ in $Z_0 Z_i$ za vse $i$. Stanje GHZ je edino stanje, pri katerem so vse te vrednosti enake 1, zato je to dokaz pravilnosti vezja in ne le vzorčni test; simulacija je mogoča, ker ima stanje GHZ vezno dimenzijo 2 in zato v matričnem produktnem zapisu porabi $O(n)$ namesto $2^n$ števil. Na \textbf{šumnem simulatorju} Aer s šumnim modelom naprave napovemo razpon $n$, v katerem zvestoba pade proti $0{,}5$, in preizkusimo lastno izvedbo ekstrapolacije. Tu je pomembno, da vezje pred simulacijo prevedemo na konkretne izbrane kubite, saj je šum vezan nanje; omejitev tega okolja pa je, da je šumni model markovski in ne vsebuje koherentnih napak, zato na njem učinka razklapljanja in sukanja ni mogoče ovrednotiti. Na \textbf{procesorju} nato izvedemo le tiste vrednosti $n$, ki jih izbere napoved simulatorja. Brezplačni paket Open Plan daje deset minut procesorskega časa na račun v 28 dneh, zato smo uporabili tri račune, vsa vezja za isti $n$ pa oddali v istem paketu, da se izvedejo pri enakih kalibracijskih pogojih.
+Vsako vezje gre skozi tri okolja. Na \textbf{idealnem simulatorju} najprej preverimo, da je pripravljeno stanje res GHZ: namesto primerjave z vektorjem stanja, ki pri 120 kubitih ne obstaja, izmerimo pričakovane vrednosti generatorjev stabilizatorske grupe, torej $X^{\otimes n}$ in $Z_0 Z_i$ za vse $i$. Stanje GHZ je edino stanje, pri katerem so vse te vrednosti enake 1, zato je to dokaz pravilnosti vezja in ne le vzorčni test; simulacija je mogoča, ker ima stanje GHZ vezno dimenzijo 2 in zato v matričnem produktnem zapisu porabi $O(n)$ namesto $2^n$ števil. Na \textbf{šumnem simulatorju} Aer s šumnim modelom naprave napovemo razpon $n$, v katerem zvestoba pade proti $0{,}5$, in preizkusimo lastno izvedbo ekstrapolacije. Tu je pomembno, da vezje pred simulacijo prevedemo na konkretne izbrane kubite, saj je šum vezan nanje; omejitev tega okolja pa je, da je šumni model markovski in ne vsebuje koherentnih napak, zato na njem učinka sukanja ni mogoče ovrednotiti, učinka razklapljanja pa le delno. Razpon $n$ za glavni niz meritev na \textbf{procesorju} smo izbrali po napovedi simulatorja. Brezplačni načrt Open Plan daje deset minut procesorskega časa na račun v 28 dneh, kar je glavna omejitev načrta poskusa na procesorju (razdelek~\ref{g30:sec:izvedba}).
+
+\subsection{Izvedba na procesorju}
+\label{g30:sec:izvedba}
+
+Populaciji in koherenco smo merili z dvema primitivoma paketa Qiskit Runtime, ker vsaka količina zahteva drugačno obdelavo. Populaciji potrebujeta porazdelitev izidov v bazi $Z$, zato smo ju merili s primitivom \texttt{SamplerV2}, ki vrne posamezne izide, napake branja pa popravili s paketom mthree~\cite{g30:nation2021}. Ta iz kalibracijskih vezij na izbranih kubitih oceni verjetnosti napačnega branja in z njimi popravi porazdelitev, pri čemer upošteva le izide, ki so se dejansko pojavili, zato ostane izvedljiv tudi pri več deset kubitih. Koherenca je pričakovana vrednost opazljivke $X^{\otimes n}$, zato smo jo merili s primitivom \texttt{EstimatorV2}, ki napake branja pri pričakovanih vrednostih popravi sam po metodi TREX~\cite{g30:vandenberg2022} in edini podpira ekstrapolacijo na ničelni šum, ki jo potrebuje konfiguracija (iv). Vezje z zasuki $R_z(\varphi)$ smo mu podali kot eno parametrizirano vezje z vsemi $2n+2$ fazami.
+
+Ker je procesorski čas omejen, smo pred vsako oddajo potrebovali oceno porabe. Strežniška suha oddaja, ki bi oceno vrnila brez izvajanja, za račune Open Plan ni na voljo, zato smo najprej oddali testno nalogo pri $n = 4$ v vseh štirih konfiguracijah in iz njene porabe izpeljali model: \SI{1,9}{\second} na nalogo in \SI{0,33}{\milli\second} na ponovitev, kar smo zaokrožili navzgor na \SI{2}{\second} in \SI{0,35}{\milli\second}. Oddajni program naloge pred oddajo lokalno pripravi z istimi funkcijami, kot jih uporabljata primitiva, prešteje ponovitve in oddajo zavrne, če ocena, povečana za \SI{30}{\percent}, presega preostanek časa na računu. Za naloge Sampler in Estimator je model napovedal \SI{467}{\second} v glavnem nizu in \SI{121}{\second} v dodatnem nizu, porabile pa so \SI{406}{\second} in \SI{105}{\second}.
+
+Po tem modelu smo določili tudi število ponovitev. Sampler izvede eno samo vezje, zato 4096 ponovitev nalogo podraži le za \SI{1,4}{\second}. Estimator izvede $2n+2$ vezij, zato 512 ponovitev na fazo pri $n = 40$ pomeni \num{41984} ponovitev; model zanjo napove \SI{16,7}{\second}, izmerjena poraba je bila \SI{15}{\second}. Kalibracija mthree je tekla pri 1024 ponovitvah.
+
+Da bi bili konfiguraciji, ki si sledita, neposredno primerljivi, se razlikujeta v natanko eni tehniki. Estimator nekatere tehnike vklopi samodejno glede na stopnjo \texttt{resilience\_level}, zato smo stopnjo postavili na 0 in vsako tehniko vklopili izrecno: razklapljanje z zaporedjem XY4 od konfiguracije (ii) naprej, sukanje vrat od (iii) naprej in ekstrapolacijo s faktorji 1, 3, 5 in linearnim modelom pri (iv), pri čemer vrata prepogne Runtime sam, na že prevedenem vezju. TREX vključuje naključno sukanje meritev, ki je bilo zato vklopljeno v vseh konfiguracijah Estimatorja; (ii) in (iii) se razlikujeta le v sukanju vrat. Ekstrapolacija deluje le na pričakovanih vrednostih, zato pri (iv) Sampler ne teče in konfiguracija uporablja populaciji iz (iii). Vse naloge za isti $n$ smo oddali v eni skupini nalog (\texttt{Batch}) skupaj s kalibracijo mthree, tako da so vse konfiguracije tekle na istih kubitih. Naloge so bile oddane v razmiku nekaj sekund, v vrstnem redu (i), (ii), (iii), (iv), kalibracija pa na koncu skupine v glavnem nizu in na začetku v dodatnem nizu.
+
+Obseg meritev je določil zakup procesorskega časa: načrt Open Plan omogoča \SI{600}{\second} na račun v 28 dneh. Imeli smo tri račune; vse naloge smo oddali z enega, druga dva pa obdržali kot rezervo za ponovitve v primeru napak. Meritve smo izvedli v treh delih: testni nalogi je sledil \emph{glavni niz}, po njegovi analizi pa še \emph{dodatni niz}. O obsegu glavnega niza smo se odločili takole. \emph{Vrednosti $n$:} cena Estimatorja raste z $n$, zato smo izbrali le nekaj enakomerno razporejenih vrednosti v korakih po 8, razpon pa postavili glede na šumno simulacijo, ki je za drevo pri $n = 32$ dala $F = 0{,}57$; mejo smo zato pričakovali nad 32 kubiti in drevo izmerili do $n = 40$. \emph{Konfiguracije in obliki:} konfiguracije (ii)--(iv) skupaj stanejo skoraj štirikrat toliko kot (i), pri $n = 8$ do $40$ \SI{251}{\second} proti \SI{64}{\second}. Za primerjavo konfiguracij zadošča ena oblika vezja in za primerjavo oblik ena konfiguracija, zato smo vse štiri konfiguracije izmerili le na drevesu, verigo pa le v (i) pri $n = 16$ in $32$. \emph{Razširitev (i):} ko je bilo vidno, da konfiguracija (i) pri $n = 40$ še dokazuje prepletenost, (ii) in (iii) pa ne več, smo (i) izmerili še pri $n = 48$, 56 in 64, da bi našli njeno mejo; preostali čas je dopuščal le najcenejšo konfiguracijo.
+
+Glavni niz je pokazal, da je razklapljanje zvestobo znižalo (razdelek~\ref{g30:sec:razprava}), kar je sprožilo dve vprašanji. Prvo je, ali razklapljanje pomaga pri vezju, v katerem kubiti mirujejo dlje, zato smo verigo pri $n = 16$ in $32$ izmerili v konfiguracijah (i)--(iii). Drugo je, ali je slabši rezultat (ii) posledica vrstnega reda nalog, saj je (ii) v vsaki skupini tekla za (i), zato smo drevo pri $n = 32$ izmerili v obrnjenem vrstnem redu, najprej (ii) in nato (i). Oba poskusa sestavljata dodatni niz, ki smo ga oddali s preostankom časa na istem računu; po njem je ostalo \SI{19}{\second}, kar ni zadoščalo za podoben preizkus vrstnega reda pri (iii). Kubiti so bili izbrani po kalibraciji ob oddaji in se od tistih v glavnem nizu razlikujejo, zato (ii) vedno primerjamo le z (i) iz iste skupine nalog.
+
+Vse skupaj je 82 nalog, vključno s testno nalogo in kalibracijami, porabilo \SI{578}{\second} od \SI{600}{\second} enega računa. Za vsako nalogo smo zabeležili identifikator, napravo, račun, čas oddaje, izbrane kubite, število ponovitev in porabljeni procesorski čas, ob vsaki skupini nalog pa še posnetek kalibracijskih podatkov naprave, iz katerega smo kasneje izračunali čase mirovanja in napake izbranih kubitov. Podatki in koda za vse izračune v tem razdelku so v repozitoriju projekta\footnote{\url{https://github.com/vj13007/NPMP-seminarska-1}}, identifikatorji nalog pa v tabeli~\ref{g30:tab:naloge}.
+
+\begin{table}[htbp]
+\caption{Identifikatorji nalog na procesorju \texttt{ibm\_fez} po nizih meritev in oblikah vezja; znotraj skupine nalog so konfiguracije navedene v vrstnem redu oddaje. Sampler je tekel pri 4096 ponovitvah (pri $n = 4$ pri 1024), Estimator pri 512 ponovitvah na fazo, kalibracija mthree pri 1024; konfiguracija (iv) uporablja populaciji iz (iii).}
+\label{g30:tab:naloge}
+\centering
+\scriptsize
+\begin{tabular}{lrllll}
+\toprule
+Oblika & $n$ & & Sampler & Estimator & kalibracija mthree \\
+\midrule
+\multicolumn{6}{l}{testna naloga, drevo} \\
+drevo & 4 & (i) & \texttt{dbucikeps3fc73bij2vg} & \texttt{dbucikdarooc73fjlnm0} & \texttt{dbucilvf8rhs73bm091g} \\
+ &  & (ii) & \texttt{dbuciknf8rhs73bm08ug} & \texttt{dbuciktarooc73fjlnn0} &  \\
+ &  & (iii) & \texttt{dbucil7f8rhs73bm08vg} & \texttt{dbucileps3fc73bij32g} &  \\
+ &  & (iv) & -- & \texttt{dbucilnf8rhs73bm0900} &  \\
+\midrule
+\multicolumn{6}{l}{glavni niz, drevo} \\
+drevo & 8 & (i) & \texttt{dc0aqr5hdvas73bj861g} & \texttt{dc0aqrts2omc73891i90} & \texttt{dc0aqvls2omc73891ikg} \\
+ &  & (ii) & \texttt{dc0aqs6q4uuc73a2bd20} & \texttt{dc0aqsmq4uuc73a2bd3g} &  \\
+ &  & (iii) & \texttt{dc0aqt2nj2vs73ddo9ig} & \texttt{dc0aqtts2omc73891ifg} &  \\
+ &  & (iv) & -- & \texttt{dc0aqv2nj2vs73ddo9ng} &  \\
+drevo & 16 & (i) & \texttt{dc0arqts2omc73891l00} & \texttt{dc0arrlhdvas73bj88rg} & \texttt{dc0arvinj2vs73ddocdg} \\
+ &  & (ii) & \texttt{dc0arrthdvas73bj88sg} & \texttt{dc0arsdhdvas73bj88v0} &  \\
+ &  & (iii) & \texttt{dc0arsuq4uuc73a2bg1g} & \texttt{dc0artinj2vs73ddoc9g} &  \\
+ &  & (iv) & -- & \texttt{dc0arv6q4uuc73a2bg5g} &  \\
+drevo & 24 & (i) & \texttt{dc0ate6q4uuc73a2bi3g} & \texttt{dc0atfinj2vs73ddoedg} & \texttt{dc0atnuq4uuc73a2bif0} \\
+ &  & (ii) & \texttt{dc0atg6q4uuc73a2bi5g} & \texttt{dc0atheq4uuc73a2bi70} &  \\
+ &  & (iii) & \texttt{dc0atimq4uuc73a2bi90} & \texttt{dc0atk5hdvas73bj8b20} &  \\
+ &  & (iv) & -- & \texttt{dc0atneq4uuc73a2bieg} &  \\
+drevo & 32 & (i) & \texttt{dc0avets2omc73891plg} & \texttt{dc0avg5hdvas73bj8da0} & \texttt{dc0avm5s2omc73891q10} \\
+ &  & (ii) & \texttt{dc0avglhdvas73bj8db0} & \texttt{dc0avi2nj2vs73ddogug} &  \\
+ &  & (iii) & \texttt{dc0avimq4uuc73a2bl00} & \texttt{dc0avjinj2vs73ddoh3g} &  \\
+ &  & (iv) & -- & \texttt{dc0avlds2omc73891pv0} &  \\
+drevo & 40 & (i) & \texttt{dc0b0a5s2omc73891qu0} & \texttt{dc0b0binj2vs73ddoi6g} & \texttt{dc0b0lqnj2vs73ddoik0} \\
+ &  & (ii) & \texttt{dc0b0c5s2omc73891r00} & \texttt{dc0b0dqnj2vs73ddoia0} &  \\
+ &  & (iii) & \texttt{dc0b0fmq4uuc73a2bm90} & \texttt{dc0b0gts2omc73891r4g} &  \\
+ &  & (iv) & -- & \texttt{dc0b0kinj2vs73ddoihg} &  \\
+drevo & 48 & (i) & \texttt{dc0bbq5s2omc73892fjg} & \texttt{dc0bbqinj2vs73ddp73g} & \texttt{dc0bbr2nj2vs73ddp74g} \\
+drevo & 56 & (i) & \texttt{dc0bc9inj2vs73ddp7r0} & \texttt{dc0bcainj2vs73ddp7tg} & \texttt{dc0bcb2nj2vs73ddp7ug} \\
+drevo & 64 & (i) & \texttt{dc0bcithdvas73bj940g} & \texttt{dc0bck2nj2vs73ddp8c0} & \texttt{dc0bcl5s2omc73892gqg} \\
+\midrule
+\multicolumn{6}{l}{glavni niz, veriga} \\
+veriga & 16 & (i) & \texttt{dc0b206q4uuc73a2boig} & \texttt{dc0b20inj2vs73ddoklg} & \texttt{dc0b216q4uuc73a2bokg} \\
+veriga & 32 & (i) & \texttt{dc0b25lhdvas73bj8hc0} & \texttt{dc0b26ds2omc73891tf0} & \texttt{dc0b275hdvas73bj8heg} \\
+\midrule
+\multicolumn{6}{l}{dodatni niz, drevo} \\
+drevo & 32 & (ii) & \texttt{dc10g6eq4uuc73a3afd0} & \texttt{dc10g6qnj2vs73denngg} & \texttt{dc10g3anj2vs73denncg} \\
+ &  & (i) & \texttt{dc10g72nj2vs73dennhg} & \texttt{dc10g7mq4uuc73a3affg} &  \\
+\midrule
+\multicolumn{6}{l}{dodatni niz, veriga} \\
+veriga & 16 & (i) & \texttt{dc10e1ls2omc738a0a8g} & \texttt{dc10e2anj2vs73denktg} & \texttt{dc10dtuq4uuc73a3ackg} \\
+ &  & (ii) & \texttt{dc10e2ls2omc738a0ab0} & \texttt{dc10e3eq4uuc73a3acsg} &  \\
+ &  & (iii) & \texttt{dc10e4anj2vs73denl0g} & \texttt{dc10e6dhdvas73bk7c10} &  \\
+veriga & 32 & (i) & \texttt{dc10ecthdvas73bk7c80} & \texttt{dc10edlhdvas73bk7c90} & \texttt{dc10e72nj2vs73denl3g} \\
+ &  & (ii) & \texttt{dc10ee6q4uuc73a3ad90} & \texttt{dc10eeqnj2vs73denld0} &  \\
+ &  & (iii) & \texttt{dc10eg5hdvas73bk7cc0} & \texttt{dc10ehls2omc738a0aq0} &  \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 
 \section{Rezultati}
@@ -188,24 +264,104 @@ Vsako vezje gre skozi tri okolja. Na \textbf{idealnem simulatorju} najprej preve
 \section{Razprava}
 \label{g30:sec:razprava}
 
-[Odgovor na raziskovalno vprašanje s številkami in primerjava s hipotezo iz uvoda. Omejitve: markovski šumni model brez koherentnih napak, majhno število vrednosti $n$ zaradi omejenega procesorskega časa, odvisnost rezultata od kalibracije na dan izvedbe.]
+Vse vrednosti v tem razdelku so rezultati naših meritev na procesorju \texttt{ibm\_fez} ali naših izračunov iz zabeleženih vezij in kalibracijskih podatkov; vir sproti navajamo.
+
+\paragraph{Odgovor na raziskovalno vprašanje.} Mejo podajamo kot največji izmerjeni $n$, pri katerem velja $F - 2\sigma > 0{,}5$ (razdelek~\ref{g30:sec:zvestoba}). V konfiguraciji (i) je ta meja 40 kubitov, kjer je $F = 0{,}607 \pm 0{,}015$; pri $n = 48$, 56 in 64 je bila zvestoba pod $0{,}5$ ($0{,}42$, $0{,}48$ in $0{,}39$), vmesnih vrednosti pa nismo merili. V konfiguracijah (ii) in (iii) je bila meja v glavnem nizu 32 kubitov. V dodatnem nizu drevo pri $n = 32$ v (ii) prepletenosti ni doseglo ($F = 0{,}473 \pm 0{,}012$), zato za (ii) lahko trdimo le, da meja ne presega 32 kubitov. Konfiguracija (iv) je ocena in po našem merilu prepletenosti ne dokazuje. Veriga je v (i) prepletenost dosegla pri 16 kubitih, pri 32 pa ne. Vse meje so rezultat posameznih zagonov: rezerva pri $n = 40$, $F - 0{,}5 = 0{,}107$, je primerljiva z razlikami med nizoma pri isti konfiguraciji, ki znašajo do $0{,}16$ (odstavek \emph{Omejitve}).
+
+\paragraph{Primerjava s hipotezo.} Hipoteza iz uvoda ima štiri dele. Napoved, da bo meja s samim popravkom branja 15--25 kubitov, je bila preveč pesimistična, saj je drevo doseglo 40. Napoved, da bo drevo preseglo verigo, se je potrdila: pri $n = 32$ je v glavnem nizu drevo doseglo $F = 0{,}73$, veriga pa $0{,}47$. Napoved, da bosta razklapljanje in sukanje mejo povečala za vsaj \SI{30}{\percent} za ceno večkratnega procesorskega časa, je ovržena v obeh delih: meja se je znižala s 40 na največ 32 kubitov, vsaka od konfiguracij (i), (ii) in (iii) pa je pri $n = 8$ do $40$ porabila \SI{64}{\second}. Napoved, da bo ekstrapolacija ocenjeno zvestobo povečala, mejo pa zaradi večje negotovosti lahko celo zmanjšala, se je uresničila le deloma: ocenjena koherenca je bila višja od izmerjene do $n = 24$, pri $n = 40$ pa nižja in brez negotovosti (odstavek \emph{Ekstrapolacija}). Za primerjavo, Kam in sodelavci so na procesorjih IBM brez detekcije napak potrdili prepletenost pri 32 kubitih~\cite{g30:kam2024}, Javadi-Abhari in sodelavci pa z detekcijo napak in post-selekcijo pri 120 kubitih~\cite{g30:bigcats2025}.
+
+\paragraph{Oblika vezja.} Obliki imata enako število vrat CZ, $n-1$, tudi vsote napak izbranih kubitov so bile pri $n = 32$ skoraj enake: napak CZ $0{,}08$ pri obeh, napak branja $0{,}41$ pri verigi in $0{,}44$ pri drevesu. Razlikujeta se v času, ko kubiti po svojih prvih vratih mirujejo. Izračunali smo ga s časovnim razvrščanjem vezij, kot so tekla na procesorju, pri trajanjih vrat iz kalibracije ob izvedbi, pri čemer čakanja v stanju $\ket{0}$ pred prvimi vrati ne štejemo, ker v njem kubit ne izgublja faze (tabela~\ref{g30:tab:mirovanje}). Pri $n = 32$ kubit v verigi v povprečju miruje \SI{1,38}{\micro\second}, v drevesu pa \SI{0,17}{\micro\second}, pri $n = 16$ pa \SI{0,63}{\micro\second} oziroma \SI{0,13}{\micro\second}. Obliki se razlikujeta tudi v postopku izbire kubitov (pot pri verigi, povezan podgraf pri drevesu), zato vpliva oblike in izbire kubitov na procesorju ne moremo povsem ločiti.
+
+Ali mirovanje zvestobo zmanjša in ali verigo prizadene bolj kot drevo, smo zato preverili s simulacijo. Šumni model, ki ga Aer zgradi iz kalibracijskih podatkov naprave, vsebuje napake vrat in branja ter termično relaksacijo s časoma $T_1$ in $T_2$, ki jo uporabi na vsakem navodilu vezja glede na njegovo trajanje. Prevedeno vezje mirovanja ne vsebuje kot navodila, zato mu simulator ne pripiše nobene napake. Vezja smo zato časovno razvrstili tako kot pri izračunu časa mirovanja, z razvrščanjem ALAP pri trajanjih vrat iz modela naprave, in vsako obdobje mirovanja uporabljenih kubitov zapolnili z eksplicitnim navodilom zakasnitve, na katerem simulator uporabi termično relaksacijo; zakasnitve pred prvimi vrati rezultata ne spremenijo, ker relaksacija stanja $\ket{0}$ ne spremeni. Obe obliki smo pri $n = 16$, 24 in 32 simulirali brez zakasnitev in z njimi, vsakič pri 1024 ponovitvah in brez ekstrapolacije, ker bi prepogibanje vrat porušilo časovno razvrstitev (tabela~\ref{g30:tab:zakasnitve}). Pri verigi so zakasnitve zvestobo pri $n = 32$ znižale z $0{,}55$ na $0{,}36$, pri drevesu z $0{,}57$ na $0{,}53$, pri $n = 16$ pa se zvestoba drevesa ni spremenila. Večji del izgube je v koherenci, ki pri verigi z $n = 32$ pade z $0{,}42$ na $0{,}19$. Brez zakasnitev je drevo pri $n = 32$ boljše od verige za $0{,}02$, z zakasnitvami za $0{,}17$, na procesorju pa za $0{,}26$. Razlika ima v simulaciji z mirovanjem in na procesorju enako smer, po velikosti pa ju ne primerjamo, ker simulacija ne vključuje popravka branja in teče na drugih kubitih.
+
+\begin{table}[htbp]
+\caption{Čas mirovanja in impulzi razklapljanja v vezjih, kot so tekla na procesorju, izračunani iz prevedenih vezij in kalibracije ob izvedbi. Trajanje vključuje končno branje (približno \SI{1,6}{\micro\second}), mirovanje je povprečni čas na kubit po njegovih prvih vratih. Impulze vstavi Qiskitov prehod za razklapljanje. Ocena izgube je verjetnost, da je napačen vsaj eden od vstavljenih impulzov, če so napake neodvisne in enake kalibracijskim napakam vrat X; izmerjena izguba je relativno zmanjšanje vsote $P_{0\ldots0} + P_{1\ldots1}$ med konfiguracijama (i) in (ii) v isti skupini nalog.}
+\label{g30:tab:mirovanje}
+\centering
+\begin{tabular}{lrrrrrr}
+\toprule
+ & & trajanje & mirovanje na & & \multicolumn{2}{c}{izguba populacij} \\
+\cmidrule(lr){6-7}
+Oblika & $n$ & [\si{\micro\second}] & kubit [\si{\micro\second}] & impulzi & ocena & izmerjena \\
+\midrule
+\multicolumn{7}{l}{glavni niz} \\
+drevo  & 16 & 2,23 & 0,13 &  32 & \SI{0,9}{\percent} & \SI{10,9}{\percent} \\
+drevo  & 24 & 2,42 & 0,17 &  56 & \SI{1,9}{\percent} & \SI{15,9}{\percent} \\
+drevo  & 32 & 2,42 & 0,17 &  84 & \SI{2,5}{\percent} & \SI{17,8}{\percent} \\
+drevo  & 40 & 2,76 & 0,26 & 108 & \SI{3,9}{\percent} & \SI{31,3}{\percent} \\
+veriga & 16 & 3,08 & 0,63 &  56 & \SI{2,0}{\percent} & -- \\
+veriga & 32 & 4,56 & 1,38 & 120 & \SI{3,7}{\percent} & -- \\
+\midrule
+\multicolumn{7}{l}{dodatni niz} \\
+drevo  & 32 & 2,76 & 0,29 &  92 & \SI{2,8}{\percent} & \SI{30,0}{\percent} \\
+veriga & 16 & 3,06 & 0,63 &  56 & \SI{2,3}{\percent} & \SI{16,1}{\percent} \\
+veriga & 32 & 4,54 & 1,36 & 120 & \SI{6,2}{\percent} & \SI{50,8}{\percent} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\caption{Šumna simulacija istih vezij brez zakasnitev in z eksplicitnimi zakasnitvami na mestih, kjer kubiti mirujejo (šumni model \texttt{FakeFez}, 1024 ponovitev, brez popravka branja). Brez zakasnitev mirujoči kubiti v simulaciji niso izpostavljeni šumu.}
+\label{g30:tab:zakasnitve}
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+ & & \multicolumn{2}{c}{$C$} & \multicolumn{2}{c}{$F$} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+Oblika & $n$ & brez & z zakasnitvami & brez & z zakasnitvami \\
+\midrule
+veriga & 16 & 0,73 & 0,60 & 0,79 & 0,71 \\
+drevo  & 16 & 0,73 & 0,70 & 0,78 & 0,78 \\
+veriga & 24 & 0,60 & 0,34 & 0,69 & 0,52 \\
+drevo  & 24 & 0,61 & 0,57 & 0,70 & 0,65 \\
+veriga & 32 & 0,42 & 0,19 & 0,55 & 0,36 \\
+drevo  & 32 & 0,45 & 0,42 & 0,57 & 0,53 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Razklapljanje in sukanje.} Razklapljanje ščiti relativno fazo mirujočih kubitov, zato je namenjeno koherenci $C$; populaciji v bazi $Z$ na defaziranje nista občutljivi, nepopolni impulzi X pa ju lahko zmanjšajo. Pri drevesu z $n = 40$ je razklapljanje vsoto $P_{0\ldots0} + P_{1\ldots1}$ zmanjšalo z $0{,}59$ na $0{,}41$ in koherenco z $0{,}62$ na $0{,}55$; koherence pri nobenem $n$ ni izboljšalo za več od statistične negotovosti.
+
+Z dodatnim nizom smo preverili dve razlagi. Če bi bil vzrok premalo mirovanja v drevesu, bi razklapljanje moralo pomagati verigi, kjer kubiti po prvih vratih mirujejo pet- do osemkrat dlje. Zvestoba verige se je z razklapljanjem znižala, pri $n = 16$ z $0{,}700 \pm 0{,}009$ na $0{,}629 \pm 0{,}009$ in pri $n = 32$ z $0{,}310 \pm 0{,}010$ na $0{,}175 \pm 0{,}009$. Če bi bil vzrok vrstni red nalog, bi obrnjen vrstni red razliko odpravil. Pri drevesu z $n = 32$ se je zvestoba z razklapljanjem, izvedenim pred (i), znižala za $0{,}18$, z $0{,}657 \pm 0{,}012$ na $0{,}473 \pm 0{,}012$, pri prvotnem vrstnem redu pa za $0{,}16$. Znižanja zato ne pripisujemo vrstnemu redu nalog niti pomanjkanju mirovanja, temveč vklopu razklapljanja, katerega mehanizma ne poznamo; oba preizkusa sta posamezna zagona.
+
+Iz kalibracijskih podatkov smo ocenili, kolikšno izgubo bi povzročile napake impulzov, če bi bile neodvisne in enake izmerjenim napakam posameznih vrat X (tabela~\ref{g30:tab:mirovanje}). Izmerjena izguba je v vseh sedmih primerjavah približno sedem- do dvanajstkrat večja od te ocene, pri drevesu z $n = 40$ na primer \SI{31}{\percent} proti \SI{4}{\percent}, zato napake posameznih vrat X izgube ne pojasnijo. Število impulzov smo izračunali s Qiskitovim prehodom za razklapljanje; ali Runtime vstavi enako število impulzov, nismo preverili. Da je učinek razklapljanja odvisen od izbranega zaporedja in naprave, so v sistematični primerjavi pokazali Ezzell in sodelavci~\cite{g30:ezzell2023}.
+
+Sukanje vrat je zvestobo pri drevesu pri $n \geq 24$ dodatno znižalo, pri verigi pa pri $n = 16$ z $0{,}629$ na $0{,}502$ in pri $n = 32$ s $0{,}175$ na $0{,}103$. Konfiguracija (iii) je v vseh skupinah tekla za (ii), vrstnega reda pa tu nismo obrnili, zato vpliva vrstnega reda na ta rezultat ne moremo izključiti. Pričakovanje iz hipoteze, da bo sukanje zvestobo povečalo, se ni uresničilo; vzroka ne poznamo.
+
+\paragraph{Ekstrapolacija.} Ekstrapolirana koherenca je bila pri $n = 8$, 16 in 24 višja od izmerjene v (iii), pri $n = 24$ na primer $0{,}77$ proti $0{,}64$. Pri $n = 32$ je bila razlika manjša od negotovosti ($0{,}53$ proti $0{,}52$), pri $n = 40$ pa je bila ocena $0{,}41$ nižja od $0{,}51$ iz (iii), negotovosti pa Runtime ni vrnil. Runtime skupaj z rezultatom vrne tudi koherence pri posameznih faktorjih ojačanja, ki so bile pri $n = 40$ enake $0{,}37$, $0{,}10$ in $0{,}06$. Upad ni linearen, zato premica skozi te tri točke pri faktorju 0 da le $0{,}41$. Ali bi nelinearen model dal zanesljivejšo oceno in ali je vrednost pri faktorju 5 že na ravni pristranskosti ocenjevalnika (razdelek~\ref{g30:sec:zvestoba}), nismo preverili. Vrednost pri faktorju 1 se od meritve v (iii) razlikuje za $0{,}15$, čeprav gre za isto vezje z istimi nastavitvami v isti skupini nalog, kar je primerljivo s celotnim popravkom ekstrapolacije. Ekstrapolacija je pri $n = 8$ do $40$ porabila \SI{123}{\second}, vsaka od konfiguracij (i)--(iii) pa \SI{64}{\second}.
+
+\paragraph{Omejitve.} Obseg meritev je omejil zakup procesorskega časa (razdelek~\ref{g30:sec:izvedba}). Ekstrapolacijo smo izmerili le na drevesu, razklapljanje in sukanje na verigi le pri dveh vrednostih $n$, vrednosti $n$ pa so v korakih po 8, zato je meja znana le na interval osmih kubitov.
+
+Vsako točko smo izmerili enkrat, zato negotovosti zajemajo le statistični šum znotraj naloge. Kjer smo isto konfiguracijo izmerili v obeh nizih, so razlike večje od te negotovosti: drevo v (i) pri $n = 32$ je doseglo $0{,}731 \pm 0{,}013$ oziroma $0{,}657 \pm 0{,}012$, veriga v (i) pri $n = 16$ $0{,}787 \pm 0{,}007$ oziroma $0{,}700 \pm 0{,}009$ in pri $n = 32$ $0{,}467 \pm 0{,}011$ oziroma $0{,}310 \pm 0{,}010$. Kubiti so bili vsakič izbrani po trenutni kalibraciji; pri verigi z $n = 32$ je bila vsota napak CZ izbranih kubitov v dodatnem nizu dvakrat večja ($0{,}165$ proti $0{,}082$). Zvestoba tudi ni monotona: pri $n = 56$ je bila $0{,}48 \pm 0{,}02$, pri $n = 48$ pa $0{,}42 \pm 0{,}02$. Populaciji sta pri obeh skoraj enaki ($0{,}49$), razlika je v koherenci ($0{,}47$ proti $0{,}36$), povprečne napake vrat CZ in branja na kubit pa so pri obeh skoraj enake; vzroka ne poznamo. Ocena koherence je navzgor pristranska (razdelek~\ref{g30:sec:zvestoba}), kar merilo prepletenosti rahlo favorizira; velikosti te pristranskosti pri naših meritvah nismo ocenili.
+
+Izbira kubitov upošteva napake vrat in branja, ne pa časov razpada, in od $n = 32$ naprej je bil v vsakem drevesu kubit s $T_2$ pod \SI{17}{\micro\second}. Šumni model simulatorja vsebuje le markovske napake, zato učinka sukanja z njim ni mogoče ovrednotiti, učinek razklapljanja pa le delno, česar nismo izvedli. Ker simulacija ne vključuje popravka branja, njene absolutne vrednosti niso primerljive z meritvami na procesorju.
 
 \subsection{Kaj ni delovalo}
 \label{g30:sec:neuspehi}
 
-[Kandidata, ki sta se pokazala med delom: (a) na šumnem simulatorju sta veriga in drevo do $n = 24$ dala praktično enako zvestobo, čeprav se globini razlikujeta za faktor~5, in šele pri $n = 28$ in $n = 32$ se je pokazala prednost drevesa (0,034 oziroma 0,039) -- domnevamo, da šumni model brez eksplicitnih zakasnitev časa čakanja ne upošteva, zato je v simulaciji vidna predvsem enaka cena enako velikega števila vrat; (b) prvotna izvedba ekstrapolacije pred prevajanjem, pri kateri je prevajalnik prepognjena vrata takoj odstranil. Dopolni s tistim, kar se bo pokazalo na procesorju.]
+Glavni neuspeh je, da razklapljanja in sukanja, na katerih je temeljila hipoteza, pred celotnim nizom meritev nismo preizkusili pri velikosti vezja, pri kateri bi lahko opazili njun učinek. Testna naloga pri $n = 4$ ga ni mogla pokazati, saj razklapljanje v tem vezju ni vstavilo nobenega impulza (izračun iz zabeleženega vezja), zvestoba pa je bila v (i) in (ii) enaka, $0{,}968$ in $0{,}970$. Da sta obe tehniki zvestobo znižali, je pokazal šele glavni niz. Čas mirovanja in oceno cene impulzov je mogoče izračunati brez procesorskega časa, kot smo to storili naknadno, vendar ta ocena izgube ne napove, saj je izmerjena izguba sedem- do dvanajstkrat večja. Tehniko blaženja je zato treba pred celotnim nizom preizkusiti na procesorju pri velikosti vezja, pri kateri tehnika dejansko vstavi impulze.
+
+Drugi neuspeh je model za $F(n)$, s katerim smo prvotno nameravali določiti mejo (razdelek~\ref{g30:sec:zvestoba}). Eksponentna funkcija $F = a\,e^{-n/n_0}$, prilagojena točkam konfiguracije (i) do $n = 40$, tako kot pri drugih konfiguracijah, seka $0{,}5$ pri $n = 64 \pm 2$, izmerjena zvestoba pri $n = 48$ pa je $0{,}42$. Tudi pri (ii) krivulja seka $0{,}5$ pri $n = 41{,}6$, izmerjena zvestoba pri $n = 40$ pa je $0{,}48$. Model mejo torej precenjuje, zato smo namesto presečišča uporabili največji izmerjeni $n$ s pristno večdelno prepletenostjo. Primerjava konfiguracij na enakem razponu $n$ pri tem ostane veljavna, saj (i) tudi pri prileganju do $n = 40$ ostane daleč pred (ii) do (iv).
+
+Tretji neuspeh je napoved šumnega simulatorja, po kateri smo izbrali razpon $n$ za glavni niz. Brez zakasnitev se veriga in drevo na simulatorju do $n = 32$ razlikujeta za največ $0{,}02$ (tabela~\ref{g30:tab:zakasnitve}), na procesorju pa je bila razlika pri $n = 32$ $0{,}26$. V simuliranih vezjih mirovanje ni bilo zapisano kot navodilo, zato mu šumni model ni pripisal napake; z eksplicitnimi zakasnitvami se razlika med oblikama pojavi. Napoved je bila torej izdelana z modelom, ki mirovanja ni upošteval. Nazadnje ni delovala strežniška suha oddaja za oceno porabe, ki za račune Open Plan ni na voljo, zato smo porabo napovedovali z lastnim modelom (razdelek~\ref{g30:sec:izvedba}).
 
 
 \section{Zaključek}
 \label{g30:sec:zakljucek}
 
-[Glavni rezultat v nekaj stavkih in predlog nadaljevanja, npr. detekcija napak s post-selekcijo ali afino prilagojena vezja na novejših procesorjih.]
+Procesor \texttt{ibm\_fez} je s plitvim drevesom BFS in samim popravkom napak branja pripravil stanje GHZ s pristno večdelno prepletenostjo na 40 kubitih, z linearno verigo pa na 16, pri 32 pa ne več; obe meji sta rezultat posameznih zagonov. Obliki imata enako število vrat in podobne napake izbranih kubitov, kubiti v verigi pa po prvih vratih mirujejo pet- do osemkrat dlje, in v simulaciji z eksplicitnimi zakasnitvami je prav mirovanje tisto, kar verigo loči od drevesa. Razklapljanje in sukanje procesorskega časa nista podaljšala, a sta v vseh naših primerjavah zvestobo znižala, pri obeh oblikah; za razklapljanje smo z obrnjenim vrstnim redom pokazali, da znižanje ni posledica vrstnega reda nalog. Ekstrapolacija na ničelni šum je porabo skoraj podvojila, ocenjena koherenca pa je bila višja od izmerjene le do 24 kubitov. Na \texttt{ibm\_fez} in z nastavitvami iz tabele~\ref{g30:tab:konfiguracije} je največjo mejo dala osnovna konfiguracija.
+
+Obseg poskusa je omejil zakup \SI{600}{\second} procesorskega časa na račun v 28 dneh, od katerih smo porabili \SI{578}{\second}. Zato smo ekstrapolacijo izmerili le na drevesu, razklapljanje in sukanje na verigi le pri dveh vrednostih $n$, vsako točko izmerili enkrat in mejo določili le na interval osmih kubitov. Rezervna računa omogočata nadaljevanje v petih smereh, ki izhajajo iz naših rezultatov. Prva so ponovljene meritve istih točk na različnih kubitih, s katerimi bi negotovost meje zajela tudi razlike med zagoni, ki so bile v naših podatkih večje od statističnega šuma. Druga je gostejše vzorčenje $n$ med 40 in 48 v konfiguraciji (i). Tretja je izbira kubitov, ki upošteva tudi čase razpada, saj so naša drevesa od $n = 32$ naprej vsebovala kubite s $T_2$ pod \SI{17}{\micro\second}. Četrta je iskanje vzroka, zakaj razklapljanje stane več, kot napovedo kalibracijske napake vrat: s štetjem impulzov, kot jih vstavi Runtime, s simulacijo vezij z vstavljenimi impulzi in s primerjavo zaporedij~\cite{g30:ezzell2023} na majhnem vezju, ter preizkus vrstnega reda tudi za sukanje. Peta je ekstrapolacija z nelinearnim modelom, saj upad koherence s faktorjem ojačanja v naših podatkih ni bil linearen. Večji doseg od tega bi zahteval detekcijo napak s post-selekcijo, s katero so na procesorjih IBM dosegli 120 kubitov~\cite{g30:bigcats2025}.
 
 
 \section*{Doprinosi avtorjev}
 
-Veno Jakomin je zasnoval in implementiral vezji za pripravo stanja GHZ ter izbiro kubitov na grafu naprave, izvedel idealne in šumne simulacije z lastno izvedbo ekstrapolacije na ničelni šum ter napisal poglavji~\ref{g30:sec:uvod} in~\ref{g30:sec:metode}.
+Veno Jakomin je zasnoval in implementiral vezji za pripravo stanja GHZ ter izbiro kubitov na grafu naprave, izvedel idealne in šumne simulacije z lastno izvedbo ekstrapolacije na ničelni šum ter napisal razdelka~\ref{g30:sec:uvod} in~\ref{g30:sec:metode}.
 
 [Jure Pahor: cevovod za merjenje zvestobe, prilagajanje krivulje $F(n)$ in $n_{\mathrm{max}}$, slike in poglavje~\ref{g30:sec:rezultati}.]
 
-[Grega Potočnik: nastavitve blaženja napak v Qiskit Runtime, testna naloga in spremljanje porabe, oddaja nalog na procesor, beleženje identifikatorjev nalog in kalibracij, podpoglavje~\ref{g30:sec:neuspehi}.]
+Grega Potočnik je nastavil konfiguracije blaženja napak v Qiskit Runtime, izvedel testno nalogo in iz nje izpeljal napoved porabe procesorskega časa, napisal program za oddajo nalog s sprotnim beleženjem identifikatorjev, porabe in kalibracijskih podatkov, oddal vse naloge na procesor \texttt{ibm\_fez}, zasnoval in izvedel dodatna poskusa z razklapljanjem na verigi in z obrnjenim vrstnim redom konfiguracij, iz prevedenih vezij ovrednotil čas mirovanja in ceno razklapljanja ter napisal razdelka~\ref{g30:sec:izvedba} in~\ref{g30:sec:neuspehi}.
+
+\section*{Izjava o uporabi generativne umetne inteligence}
+
+Pri delu smo uporabljali asistenta Claude (Anthropic) v okolju Claude Code kot pomoč pri pisanju in pregledovanju kode, pri analizi rezultatov in pri pripravi osnutkov besedila. Vse predloge kode in besedila smo pregledali, preverili na podatkih in po potrebi popravili; za vsebino poročila odgovarjamo avtorji.
