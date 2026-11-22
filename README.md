@@ -37,7 +37,7 @@ python grafi.py
 cd ../naloga && latexmk -pdf editor.tex
 ```
 
-Šumne simulacije so stohastične, zato se ob ponovnem zagonu vrednosti lahko razlikujejo za nekaj stotink. Zagon `sum.py` do n = 32 traja okoli uro in pol.
+Šumne simulacije so stohastične, zato se ob ponovnem zagonu vrednosti lahko razlikujejo za nekaj stotink. Zagon `sum.py` do n = 32 traja okoli uro in pol, privzeti nabor do n = 48 pa približno trikrat dlje.
 
 ## Zagon na procesorju IBM
 
@@ -137,10 +137,10 @@ Isti vezji na šumnem modelu naprave `FakeFez`. Vsebuje lastno izvedbo ekstrapol
 
 ```bash
 cd koda && python sum.py
-cd koda && python sum.py 36 40 44
+cd koda && python sum.py 4 8 12 16
 ```
 
-Privzeto je 1024 ponovitev meritve in faktorji ojačanja 1, 3, 5. Čas raste kot n^2, zato zagon do n = 32 vzame okoli uro in pol.
+Privzeti nabor je n = 4 do 48 v korakih po 4, 1024 ponovitev meritve in faktorji ojačanja 1, 3, 5. Argumenti nabor zamenjajo, ne dopolnijo: program `rezultati_sum.csv` vsakič prepiše z natanko tistimi n, ki so navedeni, zato je treba za razširitev razpona v enem zagonu našteti vse. Čas raste kot n^2, zato zagon do n = 32 vzame okoli uro in pol, privzeti nabor pa približno trikrat dlje.
 
 Šumni model iz kalibracijskih podatkov mirovanju kubitov ne pripiše napake, ker ga prevedeno vezje ne vsebuje kot navodila. Z zastavico `--zakasnitve` program zato isti vezji simulira brez zakasnitev in z njimi: vezje časovno razvrsti (ALAP) in vsako obdobje mirovanja uporabljenih kubitov zapolni z eksplicitnim navodilom zakasnitve, na katerem Aer uporabi termično relaksacijo. Ekstrapolacija se pri tem ne izvede, ker bi prepogibanje vrat porušilo časovno razvrstitev.
 

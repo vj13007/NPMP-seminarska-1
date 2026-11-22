@@ -162,7 +162,7 @@ if __name__ == "__main__":
             pisec.writerows(vrstice)
         sys.exit()
 
-    nabor = [int(x) for x in sys.argv[1:]] or [4, 8, 12, 16, 20, 24, 28, 32]
+    nabor = [int(x) for x in sys.argv[1:]] or [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48]
     sim = simulator()
     glava = ["n", "oblika", "P0", "P1", "C", "F", "C_1", "C_3", "C_5", "C_zne", "F_zne"]
     print(f"{'n':>4} {'oblika':8}" + "".join(f"{k:>8}" for k in glava[2:]))
