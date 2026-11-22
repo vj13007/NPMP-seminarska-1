@@ -181,6 +181,14 @@ cd koda && python analiza.py rezultati_zvestoba.csv druga.csv    # poljubne tabe
 
 Vhodna tabela potrebuje stolpce n, oblika in F; stolpci konfiguracija, F_napaka, C, C_napaka in cas_qpu so neobvezni (brez napak je prileganje neuteženo in bootstrap izpuščen). Za prileganje so potrebne vsaj tri točke.
 
+### `grafi.py` -- slike in tabele za poglavje Rezultati
+
+Iz shranjenih rezultatov (brez omrežja) nariše slike v `naloga/Skupina30/img/` (`zvestoba_n.pdf`, `konfiguracije.pdf`, `paritete.pdf`; `zne.pdf` z ekstrapolacijo na ničelni šum ustvari, a je poročilo ne vključuje) in zapiše tabeli `naloga/Skupina30/tabele/rezultati.tex` in `meje.tex`, ki ju poročilo vključi z `\input`. Pisava je Times iz paketa mathptmx kot v poročilu, zato je potreben LaTeX; slike so široke natanko `\textwidth` predloge svmult in se vključijo brez skaliranja. Po novih simulacijah program preprosto ponovno poženemo.
+
+```bash
+cd koda && python grafi.py
+```
+
 ## Izhodne datoteke
 
 | datoteka | vsebina |
